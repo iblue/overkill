@@ -1,12 +1,43 @@
 #include <highgui.h>
 #include <stdio.h>
 
+IplImage* axis;
+
+
+void match_axis(IplImage *frame) {
+  /* Initialize result space */
+  static CvMat *result = NULL;
+  if(result == NULL) {
+    int result_cols = frame->width - axis->width + 1;
+    int result_rows = frame->height - axis->height + 1;
+    result = cvCreateMat(result_rows, result_cols, CV_32FC1);
+  }
+
+  cvMatchTemplate(frame, axis, result, 1);
+
+  double minVal; double maxVal; CvPoint minLoc; CvPoint maxLoc;
+  CvPoint matchLoc;
+
+  cvMinMaxLoc(result, &minVal, &maxVal, &minLoc, &maxLoc, NULL);
+  matchLoc = minLoc;
+
+  /* Draw circle, FIXME: Remove */
+  cvCircle(frame, matchLoc, 2, CV_RGB(0,255,0), 1, CV_AA, 0);
+
+  return;
+}
+
 int main(int argc, char **argv) {
     if(argc != 2) {
         printf("Overkill: Motion Tracking Prototype\n\n"
                "Usage: %s <input video file>\n", argv[0]);
         exit(1);
     }
+
+    axis = cvLoadImage("/home/iblue/motiontrack/axis.png", 1);
+
+
+
 
     /* Create a window */
     cvNamedWindow("Overkill", CV_WINDOW_AUTOSIZE);
@@ -22,6 +53,9 @@ int main(int argc, char **argv) {
         /* grab frame image, and retrieve */
         frame = cvQueryFrame(capture);
 
+        /* Search axis */
+        match_axis(frame);
+
         /* exit loop if fram is null / movie end */
         if(!frame) break;
 
@@ -30,7 +64,7 @@ int main(int argc, char **argv) {
 
         /* if ESC is pressed then exit loop */
         char c = cvWaitKey(33);
-        if(c==27) break;
+        if(c==27 || c == 'q') break;
     }
 
     /* destroy pointer to video */
