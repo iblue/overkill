@@ -82,7 +82,7 @@ void trackFeatures(IplImage *frame, int current_frame) {
   }
 
   for(int i=0;i<FEATURE_COUNT;i++) {
-    /* Try to loat position from feature cache or calculte if not available */
+    /* Try to load position from feature cache or calculte if not available */
     CvPoint location;
     if(fread(&location, sizeof(CvPoint), 1, feature_cache_fh) == 1) {
     } else {
@@ -90,18 +90,19 @@ void trackFeatures(IplImage *frame, int current_frame) {
       fwrite(&location, sizeof(CvPoint), 1, feature_cache_fh);
     }
 
-    /* FIXME: Init -> we dont know current frame */
+    /* Initialize if first frame */
     if(current_frame == 0) {
       last_location[i] = location;
+      stable[i]        = 1;
     }
 
     /* Calculate distance to last location. If distance too big -> skip marker */
     double distance = okDistance(&last_location[i], &location);
-    char marker_fail = 0;
 
     if(distance > 15.0) {
-      marker_fail = 1;
+      stable[i] = 0;
     } else {
+      stable[i] = 1;
       last_location[i] = location;
     }
 
@@ -114,6 +115,6 @@ void trackFeatures(IplImage *frame, int current_frame) {
 
     cvCircle(frame, location, 3, color, 1, CV_AA, 0);
 
-    printf("Frame %d, Feature %d at %d, %d. FAIL: %d\n", current_frame, i, location.x, location.y, marker_fail);
+    printf("Frame %d, Feature %d at %d, %d. FAIL: %d\n", current_frame, i, location.x, location.y, stable[i]);
   }
 }
