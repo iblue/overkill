@@ -1,3 +1,5 @@
 *.o
 overkill
 *.bin
+*.mpg
+*.mp4

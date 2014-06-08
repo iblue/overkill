@@ -1,0 +1,1 @@
+void deshake(IplImage*, IplImage*);

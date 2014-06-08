@@ -10,7 +10,7 @@
 IplImage* feature_templates[FEATURE_COUNT];
 CvMat* feature_results[FEATURE_COUNT];
 CvPoint last_location[FEATURE_COUNT];
-bool stable[FEATURE_COUNT];
+int stable[FEATURE_COUNT];
 FILE* feature_cache_fh;
 
 void initFeatures(const char* feature_cache_file);

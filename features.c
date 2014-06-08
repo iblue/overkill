@@ -109,7 +109,7 @@ void trackFeatures(IplImage *frame, int current_frame) {
     /* Draw marker */
     /* FIXME: Modifying the current frame is not allowed by OpenCV */
     CvScalar color = (current_frame % 2 == 0) ? CV_RGB(255,0,0):  CV_RGB(0,255,0);
-    if(marker_fail) {
+    if(stable[i] == 0) {
       color = CV_RGB(255,255,0);
     }
 
