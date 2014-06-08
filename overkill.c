@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "features.h"
 #include "deshaker.h"
+#include "mask.h"
 #include "inline.h"
 
 int main(int argc, char **argv) {
@@ -37,9 +38,16 @@ int main(int argc, char **argv) {
 
         trackFeatures(frame, current_frame);
 
-        IplImage *target = cvCreateImage(cvSize(frame->width,frame->height),
+        IplImage *temp = cvCreateImage(cvSize(frame->width,frame->height),
           frame->depth, frame->nChannels);
-        deshake(frame, target);
+
+        /*IplImage *target = cvCreateImage(cvSize(frame->width,frame->height),
+          frame->depth, frame->nChannels);*/
+        IplImage *target;
+
+        deshake(frame, temp);
+        target = mask(temp);
+        cvReleaseImage(&temp);
 
         /* display frame into window and write to outfile */
         cvShowImage("Overkill", target);

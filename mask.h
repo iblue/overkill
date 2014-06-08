@@ -1,0 +1,1 @@
+IplImage* mask(IplImage*);
