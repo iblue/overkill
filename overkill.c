@@ -4,9 +4,9 @@
 #include "features.h"
 
 int main(int argc, char **argv) {
-    if(argc != 2) {
+    if(argc != 3) {
         printf("Overkill: Motion Tracking Prototype\n\n"
-               "Usage: %s <input video file>\n", argv[0]);
+               "Usage: %s <input video file> <output video file>\n", argv[0]);
         exit(1);
     }
 
@@ -17,6 +17,9 @@ int main(int argc, char **argv) {
 
     /* capture frame from video file */
     CvCapture* capture = cvCreateFileCapture(argv[1]);
+
+    /* Output file */
+    CvVideoWriter* output = cvCreateVideoWriter(argv[2], CV_FOURCC('P','I','M','1'), 30, cvSize(1280,720), 1);
 
     /* Create IplImage to point to each frame */
     IplImage* frame;
@@ -43,6 +46,9 @@ int main(int argc, char **argv) {
 
         /* display frame into window */
         cvShowImage("Overkill", frame);
+
+        /* And output to file */
+        cvWriteFrame(output, frame);
 
         /* if ESC is pressed then exit loop */
         char c = cvWaitKey(33);
