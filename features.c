@@ -34,6 +34,7 @@ CvPoint matchFeature(IplImage *frame, int feature_type) {
     int result_cols = frame->width - template->width + 1;
     int result_rows = frame->height - template->height + 1;
     result = cvCreateMat(result_rows, result_cols, CV_32FC1);
+    feature_results[feature_type] = result;
   }
 
   cvMatchTemplate(frame, template, result, 1);
