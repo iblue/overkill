@@ -4,9 +4,9 @@
 #include "features.h"
 
 int main(int argc, char **argv) {
-    if(argc != 3) {
+    if(argc != 4) {
         printf("Overkill: Motion Tracking Prototype\n\n"
-               "Usage: %s <input video file> <output video file>\n", argv[0]);
+               "Usage: %s <input video file> <output video file> <feature file>\n", argv[0]);
         exit(1);
     }
 
@@ -21,17 +21,37 @@ int main(int argc, char **argv) {
     /* Output file */
     CvVideoWriter* output = cvCreateVideoWriter(argv[2], CV_FOURCC('P','I','M','1'), 30, cvSize(1280,720), 1);
 
+    /* In/Output feature list */
+    FILE* fh = fopen(argv[3], "r+");
+    if(fh == NULL) {
+      fh = fopen(argv[3], "w");
+    }
+    assert(fh != NULL);
+
     /* Create IplImage to point to each frame */
     IplImage* frame;
 
     /* Loop until frame ended or ESC is pressed */
     while(1) {
         /* grab frame image, and retrieve */
+        int current_frame = cvGetCaptureProperty(capture, CV_CAP_PROP_POS_FRAMES);
         frame = cvQueryFrame(capture);
+        int frame_read = 0;
+        if(fread(&frame_read, sizeof(int), 1, fh) == 1) {
+          /* we have data for this frame */
+        } else {
+          fwrite(&current_frame, sizeof(int), 1, fh);
+        }
 
         /* Track features */
         for(int i=0;i<FEATURE_COUNT;i++) {
-          matchFeature(frame, i);
+          CvPoint location;
+          if(fread(&location, sizeof(CvPoint), 1, fh) == 1) {
+          } else {
+            location = matchFeature(frame, i);
+            fwrite(&location, sizeof(CvPoint), 1, fh);
+          }
+          printf("Frame %d, Feature %d at %d, %d\n", current_frame, i, location.x, location.y);
         }
 
         /*CvPoint axis = matchFeature(frame, FEATURE_AXIS);
