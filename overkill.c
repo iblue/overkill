@@ -3,6 +3,11 @@
 #include <stdio.h>
 #include "features.h"
 
+/* Why is there no such function in OpenCV? */
+static inline double okDistance(CvPoint *pt1, CvPoint *pt2) {
+  return sqrt(pow(pt1->x - pt2->x,2) + pow(pt1->y - pt2->y,2));
+}
+
 int main(int argc, char **argv) {
     if(argc != 4) {
         printf("Overkill: Motion Tracking Prototype\n\n"
@@ -44,16 +49,41 @@ int main(int argc, char **argv) {
         }
 
         /* Track features */
+        CvPoint last_location[FEATURE_COUNT];
+
         for(int i=0;i<FEATURE_COUNT;i++) {
+          /* Calculate feature position or load from feature cache */
           CvPoint location;
           if(fread(&location, sizeof(CvPoint), 1, fh) == 1) {
           } else {
             location = matchFeature(frame, i);
             fwrite(&location, sizeof(CvPoint), 1, fh);
           }
+
+          /* Init */
+          if(current_frame == 0) {
+            last_location[i] = location;
+          }
+
+          /* Calculate distance to last location. If distance too big -> skip marker */
+          double distance = okDistance(&last_location[i], &location);
+          char marker_fail = 0;
+
+          if(distance > 10.0) {
+            marker_fail = 1;
+          } else {
+            last_location[i] = location;
+          }
+
           /* Draw marker */
-          cvCircle(frame, location, 3, (current_frame % 2 == 0) ? CV_RGB(255,0,0):  CV_RGB(0,255,0), 1, CV_AA, 0);
-          printf("Frame %d, Feature %d at %d, %d\n", current_frame, i, location.x, location.y);
+          CvScalar color = (current_frame % 2 == 0) ? CV_RGB(255,0,0):  CV_RGB(0,255,0);
+          if(marker_fail) {
+            color = CV_RGB(255,255,0);
+          }
+
+          cvCircle(frame, location, 3, color, 1, CV_AA, 0);
+
+          printf("Frame %d, Feature %d at %d, %d. FAIL: %d\n", current_frame, i, location.x, location.y, marker_fail);
         }
 
         /*CvPoint axis = matchFeature(frame, FEATURE_AXIS);
