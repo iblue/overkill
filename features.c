@@ -99,7 +99,7 @@ void trackFeatures(IplImage *frame, int current_frame) {
     /* Calculate distance to last location. If distance too big -> skip marker */
     double distance = okDistance(&last_location[i], &location);
 
-    if(distance > 15.0) {
+    if(distance > 10.0) {
       stable[i] = 0;
     } else {
       stable[i] = 1;
