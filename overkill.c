@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
           double distance = okDistance(&last_location[i], &location);
           char marker_fail = 0;
 
-          if(distance > 10.0) {
+          if(distance > 15.0) {
             marker_fail = 1;
           } else {
             last_location[i] = location;
