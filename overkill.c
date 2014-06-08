@@ -1,3 +1,4 @@
+#include <cv.h>
 #include <highgui.h>
 #include <stdio.h>
 #include "features.h"
@@ -29,6 +30,13 @@ int main(int argc, char **argv) {
         for(int i=0;i<FEATURE_COUNT;i++) {
           matchFeature(frame, i);
         }
+
+        /*CvPoint axis = matchFeature(frame, FEATURE_AXIS);
+        axis.x -= 10;
+        CvPoint topCenter = matchFeature(frame, FEATURE_TOP_CENTER);
+        double radius = sqrt(pow(axis.x - topCenter.x,2) + pow(axis.y - topCenter.y,2));
+        radius *= 1.27;
+        cvCircle(frame, axis, radius, CV_RGB(0,255,255), 1, CV_AA, 0);*/
 
         /* exit loop if fram is null / movie end */
         if(!frame) break;

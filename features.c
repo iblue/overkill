@@ -1,6 +1,7 @@
 #include <cv.h>
 #include <highgui.h>
 #include "features.h"
+#include <stdio.h> /* snprintf */
 
 void initFeatures(void) {
   IplImage** f = feature_templates;
@@ -8,10 +9,12 @@ void initFeatures(void) {
   /* FIXME: Dynamic from config file. Also change FEATURE_COUNT */
   #define PATH "/home/iblue/motiontrack/"
 
-  f[FEATURE_AXIS]        = cvLoadImage(PATH "axis.png",       1);
-  f[FEATURE_TOP_CENTER]  = cvLoadImage(PATH "top-center.png", 1);
-  f[FEATURE_EDGE_LEFT]   = cvLoadImage(PATH "edge-left.png",  1);
-  f[FEATURE_EDGE_RIGHT]  = cvLoadImage(PATH "edge-right.png", 1);
+  f[FEATURE_AXIS]         = cvLoadImage(PATH "axis.png",         1);
+  f[FEATURE_TOP_CENTER]   = cvLoadImage(PATH "top-center.png",   1);
+  f[FEATURE_EDGE_LEFT]    = cvLoadImage(PATH "edge-left.png",    1);
+  f[FEATURE_EDGE_RIGHT]   = cvLoadImage(PATH "edge-right.png",   1);
+  f[FEATURE_BOTTOM_LEFT]  = cvLoadImage(PATH "bottom-left.png",  1);
+  f[FEATURE_BOTTOM_RIGHT] = cvLoadImage(PATH "bottom-right.png", 1);
 
   /* Initialize result matrices */
   for(int i=0;i<FEATURE_COUNT;i++) {
@@ -45,8 +48,15 @@ CvPoint matchFeature(IplImage *frame, int feature_type) {
   matchLoc.x += template->width/2;
   matchLoc.y += template->height/2;
 
-  /* Draw circle, FIXME: Remove */
+  /* Draw marker */
   cvCircle(frame, matchLoc, 2, CV_RGB(0,255,0), 1, CV_AA, 0);
+
+  /* Draw value of correllation */
+  char value[10];
+  snprintf((char *)&value, sizeof(value)-1, "%1.5f",minVal);
+  CvFont font;
+  cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 1, 1, 0, 1, 8);
+  cvPutText(frame, (const char*)value, matchLoc, &font, CV_RGB(0,0,0));
 
   return matchLoc;
 }

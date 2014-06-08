@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-std=c99 -march=native -ggdb $(shell pkg-config --cflags opencv) -Wall -Werror
-LIBS=$(shell pkg-config --libs opencv)
+LIBS=$(shell pkg-config --libs opencv) -lm
 overkill: overkill.o features.o
 	$(CC) $(CFLAGS) -o overkill overkill.o features.o $(LIBS)
 
