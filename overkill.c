@@ -41,6 +41,10 @@ int main(int argc, char **argv) {
         /* grab frame image, and retrieve */
         int current_frame = cvGetCaptureProperty(capture, CV_CAP_PROP_POS_FRAMES);
         frame = cvQueryFrame(capture);
+
+        /* exit loop if fram is null / movie end */
+        if(!frame) break;
+
         int frame_read = 0;
         if(fread(&frame_read, sizeof(int), 1, fh) == 1) {
           /* we have data for this frame */
@@ -92,9 +96,6 @@ int main(int argc, char **argv) {
         double radius = sqrt(pow(axis.x - topCenter.x,2) + pow(axis.y - topCenter.y,2));
         radius *= 1.27;
         cvCircle(frame, axis, radius, CV_RGB(0,255,255), 1, CV_AA, 0);*/
-
-        /* exit loop if fram is null / movie end */
-        if(!frame) break;
 
         /* display frame into window */
         cvShowImage("Overkill", frame);
