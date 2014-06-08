@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    initFeatureDetection();
+    initFeatures();
 
     /* Create a window */
     cvNamedWindow("Overkill", CV_WINDOW_AUTOSIZE);
