@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
         trackFeatures(frame, current_frame);
 
         /* FIXME: Overkill - We just need the same type */
+        /* FIXME: Memory Leak */
         IplImage *target = cvCloneImage(frame);
 
         deshake(frame, target);

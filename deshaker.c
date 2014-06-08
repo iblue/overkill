@@ -6,6 +6,7 @@
 void deshake(IplImage *frame, IplImage *target) {
   /* This is the target transformation. FIXME: Use sane values so the wheel
    * will be aligned */
+  /* TODO: Optimization: Static */
   CvPoint2D32f targets[] = {
     cvPoint2D32f(640.0, 360.0),   /* Axis */
     cvPoint2D32f(433.0, 360.0),   /* Top Center */
@@ -14,17 +15,31 @@ void deshake(IplImage *frame, IplImage *target) {
     cvPoint2D32f(815.0, 446.0),   /* Bottom Left */
     cvPoint2D32f(810.0, 253.0),   /* Bottom Right */
   };
-  CvMat to = cvMat(6, 1, CV_32FC2, targets);
 
-  // Matrix contains 2D vectors as channels (who designed this shit?)
-  CvPoint2D32f points[6];
-  for(int i=0;i<6;i++) {
-    points[i] = cvPoint2D32f((double) last_location[i].x,
-                             (double) last_location[i].y);
+  /* We create the point->point matricies and skip every coordinate that is
+   * considered instable by the feature tracking */
+  int coordinate_count=0;
+  CvPoint2D32f to_pts[FEATURE_COUNT];
+  for(int i=0;i<FEATURE_COUNT;i++) {
+    if(stable[i]) {
+      to_pts[coordinate_count++] = targets[i];
+    }
   }
-  CvMat from = cvMat(6, 1, CV_32FC2, points);
+  CvMat to = cvMat(coordinate_count, 1, CV_32FC2, to_pts);
 
-  CvMat *transformation = cvCreateMat(2,3, CV_32FC1);
+  /* Same for the source matrix */
+  coordinate_count=0;
+  CvPoint2D32f from_pts[6];
+  for(int i=0;i<6;i++) {
+    if(stable[i]) {
+      from_pts[coordinate_count++] = cvPoint2D32f((double) last_location[i].x,
+                                                  (double) last_location[i].y);
+    }
+  }
+  CvMat from = cvMat(coordinate_count, 1, CV_32FC2, from_pts);
+
+  // FIXME: Memory Leak
+  CvMat *transformation = cvCreateMat(2, 3, CV_32FC1);
 
   cvEstimateRigidTransform(&from, &to, transformation, 0);
 
