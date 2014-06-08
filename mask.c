@@ -19,5 +19,22 @@ IplImage* mask(IplImage *source) {
   cvRectangle(ret, cvPoint(490, 260), cvPoint(750, 320), color, 1, CV_AA, 0);
   cvRectangle(ret, cvPoint(490, 450), cvPoint(750, 380), color, 1, CV_AA, 0);
 
+  /* FIXME: Does not belong here! */
+
+  /* Convert to grey for corner tracking */
+  IplImage* temp_grey = cvCreateImage(cvGetSize(source), IPL_DEPTH_8U, 1);
+  cvCvtColor(source, temp_grey, CV_RGB2GRAY);
+
+  #define MAX_CORNERS 20
+  CvPoint2D32f corners[MAX_CORNERS];
+  int corner_count=MAX_CORNERS;
+  cvGoodFeaturesToTrack(temp_grey, NULL, NULL, corners, &corner_count, 0.01, 2, NULL, 3, 0, 0.04);
+  cvReleaseImage(&temp_grey);
+
+  /* Highlight corners */
+  for(int i=0;i<corner_count;i++) {
+    cvCircle(ret, cvPointFrom32f(corners[i]), 2, CV_RGB(0,0,0), 1, CV_AA, 0);
+  }
+
   return ret;
 }
