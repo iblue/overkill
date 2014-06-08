@@ -1,9 +1,11 @@
 #include <cv.h>
 #include <highgui.h>
+#include <stdio.h> /* snprintf, f* */
 #include "features.h"
-#include <stdio.h> /* snprintf */
+#include "inline.h"
 
-void initFeatures(void) {
+/* Loads feature templates and opens cache file */
+void initFeatures(const char* cache_file) {
   IplImage** f = feature_templates;
 
   /* FIXME: Dynamic from config file. Also change FEATURE_COUNT */
@@ -20,8 +22,17 @@ void initFeatures(void) {
   for(int i=0;i<FEATURE_COUNT;i++) {
     feature_results[i] = NULL;
   }
+
+  /* Cache file for holding feature positions, because feature dection is slow
+   * as fuck */
+  feature_cache_fh = fopen(cache_file, "r+");
+  if(feature_cache_fh == NULL) {
+    feature_cache_fh = fopen(cache_file, "w");
+  }
+  assert(feature_cache_fh != NULL);
 }
 
+/* Estimates the position of the given feature using overlapping correlation */
 CvPoint matchFeature(IplImage *frame, int feature_type) {
   assert(feature_type >= 0);
   assert(feature_type < FEATURE_COUNT);
@@ -59,4 +70,50 @@ CvPoint matchFeature(IplImage *frame, int feature_type) {
   */
 
   return matchLoc;
+}
+
+/* Updates the feature location and stability params for the given frame */
+void trackFeatures(IplImage *frame, int current_frame) {
+  int frame_read = 0;
+  if(fread(&frame_read, sizeof(int), 1, feature_cache_fh) == 1) {
+    /* we have data for this frame */
+  } else {
+    fwrite(&current_frame, sizeof(int), 1, feature_cache_fh);
+  }
+
+  for(int i=0;i<FEATURE_COUNT;i++) {
+    /* Try to loat position from feature cache or calculte if not available */
+    CvPoint location;
+    if(fread(&location, sizeof(CvPoint), 1, feature_cache_fh) == 1) {
+    } else {
+      location = matchFeature(frame, i);
+      fwrite(&location, sizeof(CvPoint), 1, feature_cache_fh);
+    }
+
+    /* FIXME: Init -> we dont know current frame */
+    if(current_frame == 0) {
+      last_location[i] = location;
+    }
+
+    /* Calculate distance to last location. If distance too big -> skip marker */
+    double distance = okDistance(&last_location[i], &location);
+    char marker_fail = 0;
+
+    if(distance > 15.0) {
+      marker_fail = 1;
+    } else {
+      last_location[i] = location;
+    }
+
+    /* Draw marker */
+    /* FIXME: Modifying the current frame is not allowed by OpenCV */
+    CvScalar color = (current_frame % 2 == 0) ? CV_RGB(255,0,0):  CV_RGB(0,255,0);
+    if(marker_fail) {
+      color = CV_RGB(255,255,0);
+    }
+
+    cvCircle(frame, location, 3, color, 1, CV_AA, 0);
+
+    printf("Frame %d, Feature %d at %d, %d. FAIL: %d\n", current_frame, i, location.x, location.y, marker_fail);
+  }
 }

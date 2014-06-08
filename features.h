@@ -9,6 +9,9 @@
 
 IplImage* feature_templates[FEATURE_COUNT];
 CvMat* feature_results[FEATURE_COUNT];
+CvPoint last_location[FEATURE_COUNT];
+FILE* feature_cache_fh;
 
-void initFeatures(void);
+void initFeatures(const char* feature_cache_file);
 CvPoint matchFeature(IplImage*, int);
+void trackFeatures(IplImage*, int);

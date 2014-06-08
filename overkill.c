@@ -2,11 +2,7 @@
 #include <highgui.h>
 #include <stdio.h>
 #include "features.h"
-
-/* Why is there no such function in OpenCV? */
-static inline double okDistance(CvPoint *pt1, CvPoint *pt2) {
-  return sqrt(pow(pt1->x - pt2->x,2) + pow(pt1->y - pt2->y,2));
-}
+#include "inline.h"
 
 int main(int argc, char **argv) {
     if(argc != 4) {
@@ -15,7 +11,7 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    initFeatures();
+    initFeatures(argv[3]);
 
     /* Create a window */
     cvNamedWindow("Overkill", CV_WINDOW_AUTOSIZE);
@@ -25,13 +21,6 @@ int main(int argc, char **argv) {
 
     /* Output file */
     CvVideoWriter* output = cvCreateVideoWriter(argv[2], CV_FOURCC('P','I','M','1'), 30, cvSize(1280,720), 1);
-
-    /* In/Output feature list */
-    FILE* fh = fopen(argv[3], "r+");
-    if(fh == NULL) {
-      fh = fopen(argv[3], "w");
-    }
-    assert(fh != NULL);
 
     /* Create IplImage to point to each frame */
     IplImage* frame;
@@ -45,50 +34,7 @@ int main(int argc, char **argv) {
         /* exit loop if fram is null / movie end */
         if(!frame) break;
 
-        int frame_read = 0;
-        if(fread(&frame_read, sizeof(int), 1, fh) == 1) {
-          /* we have data for this frame */
-        } else {
-          fwrite(&current_frame, sizeof(int), 1, fh);
-        }
-
-        /* Track features */
-        CvPoint last_location[FEATURE_COUNT];
-
-        for(int i=0;i<FEATURE_COUNT;i++) {
-          /* Calculate feature position or load from feature cache */
-          CvPoint location;
-          if(fread(&location, sizeof(CvPoint), 1, fh) == 1) {
-          } else {
-            location = matchFeature(frame, i);
-            fwrite(&location, sizeof(CvPoint), 1, fh);
-          }
-
-          /* Init */
-          if(current_frame == 0) {
-            last_location[i] = location;
-          }
-
-          /* Calculate distance to last location. If distance too big -> skip marker */
-          double distance = okDistance(&last_location[i], &location);
-          char marker_fail = 0;
-
-          if(distance > 15.0) {
-            marker_fail = 1;
-          } else {
-            last_location[i] = location;
-          }
-
-          /* Draw marker */
-          CvScalar color = (current_frame % 2 == 0) ? CV_RGB(255,0,0):  CV_RGB(0,255,0);
-          if(marker_fail) {
-            color = CV_RGB(255,255,0);
-          }
-
-          cvCircle(frame, location, 3, color, 1, CV_AA, 0);
-
-          printf("Frame %d, Feature %d at %d, %d. FAIL: %d\n", current_frame, i, location.x, location.y, marker_fail);
-        }
+        trackFeatures(frame, current_frame);
 
         /* Signed ints will be transformed to floats anyway, so we can do this
          * directly without performance loss */
