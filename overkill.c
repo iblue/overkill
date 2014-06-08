@@ -37,15 +37,15 @@ int main(int argc, char **argv) {
 
         trackFeatures(frame, current_frame);
 
-        /* FIXME: Overkill - We just need the same type */
-        /* FIXME: Memory Leak */
-        IplImage *target = cvCloneImage(frame);
-
+        IplImage *target = cvCreateImage(cvSize(frame->width,frame->height),
+          frame->depth, frame->nChannels);
         deshake(frame, target);
 
         /* display frame into window and write to outfile */
         cvShowImage("Overkill", target);
         cvWriteFrame(output, target);
+
+        cvReleaseImage(&target);
 
         /* if ESC or q is pressed then exit loop */
         char c = cvWaitKey(33);
