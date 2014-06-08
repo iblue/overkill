@@ -49,15 +49,14 @@ CvPoint matchFeature(IplImage *frame, int feature_type) {
   matchLoc.x += template->width/2;
   matchLoc.y += template->height/2;
 
-  /* Draw marker */
-  cvCircle(frame, matchLoc, 2, CV_RGB(0,255,0), 1, CV_AA, 0);
-
   /* Draw value of correllation */
+  /*
   char value[10];
   snprintf((char *)&value, sizeof(value)-1, "%1.5f",minVal);
   CvFont font;
   cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 1, 1, 0, 1, 8);
   cvPutText(frame, (const char*)value, matchLoc, &font, CV_RGB(0,0,0));
+  */
 
   return matchLoc;
 }

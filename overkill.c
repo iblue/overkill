@@ -51,6 +51,8 @@ int main(int argc, char **argv) {
             location = matchFeature(frame, i);
             fwrite(&location, sizeof(CvPoint), 1, fh);
           }
+          /* Draw marker */
+          cvCircle(frame, location, 3, (current_frame % 2 == 0) ? CV_RGB(255,0,0):  CV_RGB(0,255,0), 1, CV_AA, 0);
           printf("Frame %d, Feature %d at %d, %d\n", current_frame, i, location.x, location.y);
         }
 
