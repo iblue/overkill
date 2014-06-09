@@ -1,5 +1,4 @@
 #include <cv.h>
-
 #include <highgui.h>
 #include <stdio.h>
 #include "features.h"
@@ -9,6 +8,12 @@
 #include "inline.h"
 
 float rotation_angle=0.0;
+
+void opticalFlow(IplImage* prev, IplImage* curr, IplImage *mask, CvPoint2D32f*
+    prev_pts, CvPoint2D32f *curr_pts, int* pts_cnt);
+void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_pts, int size);
+int filterPts(CvPoint2D32f *pts, char* status, int size);
+double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size);
 
 int main(int argc, char **argv) {
     if(argc != 4) {
@@ -31,17 +36,20 @@ int main(int argc, char **argv) {
 
     /* Create IplImage to point to each frame */
     IplImage* frame;
+    IplImage* current_deshaked_frame = NULL;
     IplImage* last_deshaked_frame = NULL;
 
     /* For dynamic feature tracking */
     #define MAX_CORNERS 40
-    #define MIN_CORNERS 20
+    #define MIN_CORNERS 10
     int corner_count = MAX_CORNERS;
     CvPoint2D32f corners[MAX_CORNERS];
-    int last_corner_count = MAX_CORNERS;
     CvPoint2D32f last_corners[MAX_CORNERS];
-    char corner_status[MAX_CORNERS];
     IplImage *tracking_mask = NULL;
+
+    /* Holds the corners detected by findTrackingPoints */
+    int tracking_point_count = MAX_CORNERS;
+    CvPoint2D32f tracking_points[MAX_CORNERS];
 
     /* Loop until frame ended or ESC is pressed */
     while(1) {
@@ -56,112 +64,52 @@ int main(int argc, char **argv) {
         trackFeatures(frame, current_frame);
 
         /* deshake using static features */
-        IplImage *deshaked_frame = cvCreateImage(cvSize(frame->width,frame->height),
+        current_deshaked_frame = cvCreateImage(cvSize(frame->width,frame->height),
           frame->depth, frame->nChannels);
-        deshake(frame, deshaked_frame);
-
-        /* Detect optical flow to last frame */
-        if(last_deshaked_frame) {
-          /* Termination criteria */
-          int type = CV_TERMCRIT_ITER|CV_TERMCRIT_EPS;
-          double eps = 0.01;
-          int iter = 10;
-
-          CvTermCriteria crit = cvTermCriteria(type,iter,eps);
-          cvCalcOpticalFlowPyrLK(last_deshaked_frame, deshaked_frame,
-              NULL, NULL, last_corners, corners, last_corner_count,
-              cvSize(10,10), 3, corner_status, NULL, crit, 0);
-          cvReleaseImage(&last_deshaked_frame);
-
-          /* Remove points that left the tracking mask */
-          for(int i=0;i<last_corner_count;i++) {
-            /* Not found by flow tracking -> skip */
-            if(corner_status[i] == 0) {
-              continue;
-            }
-
-            /* Point left the tracking mask */
-            CvPoint pnt = cvPointFrom32f(corners[i]);
-            int col = tracking_mask->imageData[1280*pnt.y+pnt.x];
-            if(col == 0) {
-              corner_status[i] = 0;
-              printf("mark %d out\n", i);
-            }
-          }
-
-          /* Remove all points marked for deletion */
-          int pos;
-          CvPoint2D32f new_corners[MAX_CORNERS];
-
-          pos=0;
-          for(int i=0;i<corner_count;i++) {
-            if(corner_status[i] == 1) {
-              new_corners[pos] = corners[i];
-              pos++;
-            }
-          }
-          corner_count = pos;
-          memcpy(corners, new_corners, sizeof(corners[0])*corner_count);
-
-          pos=0;
-          for(int i=0;i<last_corner_count;i++) {
-            if(corner_status[i] == 1) {
-              new_corners[pos] = last_corners[i];
-              pos++;
-            }
-          }
-          last_corner_count = pos;
-          memcpy(last_corners, new_corners, sizeof(corners[0])*corner_count);
-
-          /* Calculate angle */
-          // FIXME: Use only found
-          CvMat last_cc    = cvMat(last_corner_count, 1, CV_32FC2, last_corners);
-          CvMat current_cc = cvMat(last_corner_count, 1, CV_32FC2, corners);
-          CvMat *transformation = cvCreateMat(2, 3, CV_32FC1);
-          cvEstimateRigidTransform(&last_cc, &current_cc, transformation, 0);
-          double da = atan2(cvmGet(transformation,1,0), cvmGet(transformation,0,0));
-          rotation_angle += da;
-          printf("angle: %f\n", rotation_angle);
-        }
+        deshake(frame, current_deshaked_frame);
 
         /* Create mask for dynamic feature detection, display mask in target */
         IplImage *target;
+
+        // FIXME: Split masking and highlighting!
+        tracking_mask = mask(current_deshaked_frame, &target);
+
+        /* Detect dynamic features in mask, save to tracking_points */
+        if(current_frame == 0 || corner_count < MIN_CORNERS) {
+          tracking_point_count = MAX_CORNERS;
+          findTrackingPoints(current_deshaked_frame, tracking_mask,
+              &tracking_point_count, tracking_points);
+          printf("Found %d tracking points\n", tracking_point_count);
+          memcpy(corners, tracking_points, tracking_point_count*sizeof(corners[0]));
+          memcpy(last_corners, tracking_points, tracking_point_count*sizeof(corners[0]));
+          corner_count = tracking_point_count;
+        }
+
+        /* Determine movement of features across frames */
+        opticalFlow(last_deshaked_frame, current_deshaked_frame, tracking_mask,
+            last_corners, corners, &corner_count);
+        assert(corner_count > 0);
+
+        /* Calculate angle between features */
+        rotation_angle += angle(last_corners, corners, corner_count);
+
+        /* Rendering */
+        highlightData(target, corners, last_corners, corner_count);
+
+        /* create last frame for optical flow detection */
+        if(last_deshaked_frame) {
+          cvReleaseImage(&last_deshaked_frame);
+        }
+        last_deshaked_frame = cvCloneImage(current_deshaked_frame);
+        memcpy(last_corners, corners, corner_count*sizeof(corners[0]));
+
         if(tracking_mask) {
           cvReleaseImage(&tracking_mask);
         }
-        tracking_mask = mask(deshaked_frame, &target);
-
-        /* Highlight vectors */
-        for(int i=0;i<last_corner_count;i++) {
-          cvLine(target, cvPointFrom32f(corners[i]), cvPointFrom32f(last_corners[i]), CV_RGB(127,0,127), 1, 4, 0);
-        }
-
-        /* Detect dynamic features in mask */
-        if(current_frame == 0 || corner_count < MIN_CORNERS) {
-          corner_count = MAX_CORNERS;
-          findTrackingPoints(deshaked_frame, tracking_mask, &corner_count, corners);
-        }
-
-        /* We need lots of corners to track for the rigid transform to converge */
-        //assert(corner_count > MIN_CORNERS/2);
-
-        /* create last frame for optical flow detection */
-        last_deshaked_frame = cvCloneImage(deshaked_frame);
-        last_corner_count = corner_count;
-        memcpy(last_corners, corners, corner_count*sizeof(corners[0]));
-
-
-        /* Highlight detected features */
-        for(int i=0;i<corner_count;i++) {
-          cvCircle(target, cvPointFrom32f(corners[i]), 2, CV_RGB(255,255,255), 1, CV_AA, 0);
-        }
-
-        /* Show current rotation angle */
-        cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(rotation_angle), 358+200*sin(rotation_angle)), CV_RGB(0,255,0), 2, CV_AA, 0);
 
         /* Free mem */
-        //cvReleaseImage(&tracking_mask);
-        cvReleaseImage(&deshaked_frame);
+        cvReleaseImage(&tracking_mask);
+        cvReleaseImage(&current_deshaked_frame);
 
         /* display frame into window and write to outfile */
         cvShowImage("Overkill", target);
@@ -183,4 +131,82 @@ int main(int argc, char **argv) {
     cvDestroyWindow("Overkill");
 
     return 0;
+}
+
+/* Highlights some global data in the target frame */
+void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_pts, int size) {
+
+  /* Highlight current feature position */
+  for(int i=0;i<size;i++) {
+    cvCircle(target, cvPointFrom32f(curr_pts[i]), 2, CV_RGB(255,255,255), 1, CV_AA, 0);
+  }
+
+  /* Highlight vectors */
+  for(int i=0;i<size;i++) {
+    cvLine(target, cvPointFrom32f(prev_pts[i]), cvPointFrom32f(curr_pts[i]), CV_RGB(127,0,127), 1, 4, 0);
+  }
+
+  /* Show current rotation angle */
+  cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(rotation_angle), 358+200*sin(rotation_angle)), CV_RGB(0,255,0), 2, CV_AA, 0);
+}
+
+void opticalFlow(IplImage* prev, IplImage* curr, IplImage *mask, CvPoint2D32f*
+    prev_pts, CvPoint2D32f *curr_pts, int* pts_cnt) {
+
+  static char corner_status[MAX_CORNERS];
+
+  if(!prev) {
+    return;
+  }
+
+  /* Termination criteria: FIXME static */
+  int type = CV_TERMCRIT_ITER|CV_TERMCRIT_EPS;
+  double eps = 0.01;
+  int iter = 10;
+
+  CvTermCriteria crit = cvTermCriteria(type,iter,eps);
+  cvCalcOpticalFlowPyrLK(prev, curr,
+      NULL, NULL, prev_pts, curr_pts, *pts_cnt,
+      cvSize(10,10), 3, corner_status, NULL, crit, 0);
+
+  /* Remove points that left the tracking mask */
+  for(int i=0;i<*pts_cnt;i++) {
+    /* Not found by flow tracking -> skip */
+    if(corner_status[i] == 0) {
+      continue;
+    }
+
+    /* Point left the tracking mask */
+    CvPoint pnt = cvPointFrom32f(curr_pts[i]);
+    int col = mask->imageData[1280*pnt.y+pnt.x];
+    if(col == 0) {
+      corner_status[i] = 0;
+      printf("Feature %d left bounds\n", i);
+    }
+  }
+
+  /* Remove all points marked for deletion */
+  filterPts(curr_pts, corner_status, *pts_cnt);
+  *pts_cnt = filterPts(prev_pts, corner_status, *pts_cnt);
+}
+
+int filterPts(CvPoint2D32f *pts, char* status, int size) {
+  CvPoint2D32f new[MAX_CORNERS];
+
+  int pos=0;
+  for(int i=0;i<size;i++) {
+    if(status[i] != 0) {
+      new[pos++] = pts[i];
+    }
+  }
+  memcpy(pts, new, pos*sizeof(pts[0]));
+  return pos;
+}
+
+double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size) {
+  CvMat last_cc    = cvMat(size, 1, CV_32FC2, pts1);
+  CvMat current_cc = cvMat(size, 1, CV_32FC2, pts2);
+  CvMat *transformation = cvCreateMat(2, 3, CV_32FC1);
+  cvEstimateRigidTransform(&last_cc, &current_cc, transformation, 0);
+  return atan2(cvmGet(transformation,1,0), cvmGet(transformation,0,0));
 }

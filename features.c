@@ -114,7 +114,5 @@ void trackFeatures(IplImage *frame, int current_frame) {
     }
 
     cvCircle(frame, location, 3, color, 1, CV_AA, 0);
-
-    printf("Frame %d, Feature %d at %d, %d. FAIL: %d\n", current_frame, i, location.x, location.y, stable[i]);
   }
 }
