@@ -104,8 +104,33 @@ int main(int argc, char **argv) {
 
         /* Calculate angle between features */
         double da = angle(last_corners, corners, corner_count);
-        printf("da: %f\n",da);
-        rotation_angle += angle(last_corners, corners, corner_count);
+        rotation_angle += da;
+
+        /* Try resync */
+        {
+          /* Bullshit does not work */
+          /*
+          CvPoint2D32f to_coords;
+          CvMat from = cvMat(1, 1, CV_32FC2, &last_location[FEATURE_ZERO]);
+          CvMat to   = cvMat(1, 1, CV_32FC2, &to_coords);
+          cvTransform(&from, &to, ok_transformation, NULL);
+          */
+
+          CvPoint v;
+          v = last_location[FEATURE_ZERO];
+          CvMat*       m = ok_transformation;
+          double tx = cvmGet(m,0,0)*v.x + cvmGet(m,0,1)*v.y + cvmGet(m,0,2);
+          double ty = cvmGet(m,1,0)*v.x + cvmGet(m,1,1)*v.y + cvmGet(m,1,2);
+
+          if(tx < 820 && tx > 790 && ty < 420 && ty > 300) { // FIXME: Check if at zero point location
+            tx -= 640;
+            ty -= 358;
+            double norm = sqrt(pow(tx,2) + pow(ty,2));
+            printf("%f,%f (%f) -> %f,%f\n",tx,ty,norm,tx/norm,ty/norm);
+            rotation_angle = sin(ty/norm);
+            printf("sync %f\n", rotation_angle);
+          }
+        }
 
         /* Rendering */
         highlightData(target, corners, last_corners, corner_count);
@@ -161,7 +186,7 @@ void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_
   }
 
   /* Show current rotation angle */
-  double real_ang = rotation_angle*1.08;
+  double real_ang = rotation_angle;
   cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(real_ang), 358+200*sin(real_ang)), CV_RGB(0,255,0), 2, CV_AA, 0);
 }
 

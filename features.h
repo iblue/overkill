@@ -4,8 +4,11 @@
 #define FEATURE_EDGE_RIGHT   3
 #define FEATURE_BOTTOM_LEFT  4
 #define FEATURE_BOTTOM_RIGHT 5
+#define STATIC_FEATURE_COUNT 6
 
-#define FEATURE_COUNT 6
+#define FEATURE_ZERO 6
+
+#define FEATURE_COUNT 7
 
 IplImage* feature_templates[FEATURE_COUNT];
 CvMat* feature_results[FEATURE_COUNT];

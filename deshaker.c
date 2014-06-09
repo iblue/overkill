@@ -19,8 +19,8 @@ void deshake(IplImage *frame, IplImage *target) {
   /* We create the point->point matricies and skip every coordinate that is
    * considered instable by the feature tracking */
   int coordinate_count=0;
-  CvPoint2D32f to_pts[FEATURE_COUNT];
-  for(int i=0;i<FEATURE_COUNT;i++) {
+  CvPoint2D32f to_pts[STATIC_FEATURE_COUNT];
+  for(int i=0;i<STATIC_FEATURE_COUNT;i++) {
     if(stable[i]) {
       to_pts[coordinate_count++] = targets[i];
     }
@@ -39,10 +39,10 @@ void deshake(IplImage *frame, IplImage *target) {
   CvMat from = cvMat(coordinate_count, 1, CV_32FC2, from_pts);
 
   // FIXME: Memory Leak
-  CvMat *transformation = cvCreateMat(2, 3, CV_32FC1);
+  ok_transformation = cvCreateMat(2, 3, CV_32FC1);
 
-  cvEstimateRigidTransform(&from, &to, transformation, 0);
+  cvEstimateRigidTransform(&from, &to, ok_transformation, 0);
 
-  cvWarpAffine(frame, target, transformation,
+  cvWarpAffine(frame, target, ok_transformation,
       CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS, CV_RGB(0,0,0));
 }

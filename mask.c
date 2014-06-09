@@ -16,6 +16,7 @@ IplImage* mask(IplImage *source, IplImage **visual) {
   /* Negative tracking zones */
   CvPoint tracking_sub[] = {
     cvPoint(660, 255), cvPoint(720, 200), /* Dirt on Wall: Do not track */
+    cvPoint(790, 420), cvPoint(820, 300), /* Bottom Center: Mark Zero Zone*/
   };
 
   /* Draw circles to check if deshaking worked */

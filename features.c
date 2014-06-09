@@ -9,7 +9,7 @@ void initFeatures(const char* cache_file) {
   IplImage** f = feature_templates;
 
   /* FIXME: Dynamic from config file. Also change FEATURE_COUNT */
-  #define PATH "/home/iblue/motiontrack/"
+  #define PATH "./data/"
 
   f[FEATURE_AXIS]         = cvLoadImage(PATH "axis.png",         1);
   f[FEATURE_TOP_CENTER]   = cvLoadImage(PATH "top-center.png",   1);
@@ -17,6 +17,8 @@ void initFeatures(const char* cache_file) {
   f[FEATURE_EDGE_RIGHT]   = cvLoadImage(PATH "edge-right.png",   1);
   f[FEATURE_BOTTOM_LEFT]  = cvLoadImage(PATH "bottom-left.png",  1);
   f[FEATURE_BOTTOM_RIGHT] = cvLoadImage(PATH "bottom-right.png", 1);
+  f[FEATURE_BOTTOM_RIGHT] = cvLoadImage(PATH "bottom-right.png", 1);
+  f[FEATURE_ZERO] = cvLoadImage(PATH "zero.png", 1);
 
   /* Initialize result matrices */
   for(int i=0;i<FEATURE_COUNT;i++) {
@@ -95,12 +97,18 @@ void trackFeatures(IplImage *frame, int current_frame) {
       last_location[i] = location;
       stable[i]        = 1;
     }
+ 
+    if(i < STATIC_FEATURE_COUNT) {
+      /* Calculate distance to last location. If distance too big -> skip marker */
+      double distance = okDistance(&last_location[i], &location);
 
-    /* Calculate distance to last location. If distance too big -> skip marker */
-    double distance = okDistance(&last_location[i], &location);
-
-    if(distance > 10.0) {
-      stable[i] = 0;
+      /* Only static features can by instable */
+      if(distance > 10.0) {
+        stable[i] = 0;
+      } else {
+        stable[i] = 1;
+        last_location[i] = location;
+      }
     } else {
       stable[i] = 1;
       last_location[i] = location;
