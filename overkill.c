@@ -39,6 +39,10 @@ int main(int argc, char **argv) {
     int last_corner_count = corner_count;
     CvPoint2D32f last_corners[corner_count];
     char corner_status[corner_count];
+    CvPoint2D32f lock_on_corners[corner_count];
+    int lock_on_corner_count = corner_count;
+
+    double da = 0.0;
 
     /* Loop until frame ended or ESC is pressed */
     while(1) {
@@ -72,12 +76,11 @@ int main(int argc, char **argv) {
 
           /* Calculate angle */
           // FIXME: Use only found
-          CvMat last_cc    = cvMat(last_corner_count, 1, CV_32FC2, last_corners);
+          CvMat last_cc    = cvMat(last_corner_count, 1, CV_32FC2, lock_on_corners);
           CvMat current_cc = cvMat(last_corner_count, 1, CV_32FC2, corners);
           CvMat *transformation = cvCreateMat(2, 3, CV_32FC1);
           cvEstimateRigidTransform(&last_cc, &current_cc, transformation, 0);
-          double da = atan2(cvmGet(transformation,1,0), cvmGet(transformation,0,0));
-          rotation_angle += da;
+          da = atan2(cvmGet(transformation,1,0), cvmGet(transformation,0,0));
           printf("angle: %f\n", rotation_angle);
         }
 
@@ -86,8 +89,11 @@ int main(int argc, char **argv) {
         IplImage *tracking_mask = mask(deshaked_frame, &target);
 
         /* Detect dynamic features in mask */
-        if(current_frame == 0) {
+        if(current_frame%3 == 0) {
+          rotation_angle += da;
           findTrackingPoints(deshaked_frame, tracking_mask, &corner_count, corners);
+          lock_on_corner_count = corner_count;
+          memcpy(lock_on_corners, corners, lock_on_corner_count*sizeof(corners[0]));
         }
 
         /* create last frame for optical flow detection */
