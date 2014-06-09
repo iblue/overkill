@@ -86,9 +86,7 @@ int main(int argc, char **argv) {
         IplImage *tracking_mask = mask(deshaked_frame, &target);
 
         /* Detect dynamic features in mask */
-        if(current_frame == 0) {
-          findTrackingPoints(deshaked_frame, tracking_mask, &corner_count, corners);
-        }
+        findTrackingPoints(deshaked_frame, tracking_mask, &corner_count, corners);
 
         /* create last frame for optical flow detection */
         last_deshaked_frame = cvCloneImage(deshaked_frame);
