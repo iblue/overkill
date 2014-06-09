@@ -1,4 +1,5 @@
 #include <cv.h>
+
 #include <highgui.h>
 #include <stdio.h>
 #include "features.h"
@@ -6,6 +7,8 @@
 #include "mask.h"
 #include "optiflow.h"
 #include "inline.h"
+
+float rotation_angle=0.0;
 
 int main(int argc, char **argv) {
     if(argc != 4) {
@@ -66,6 +69,16 @@ int main(int argc, char **argv) {
               NULL, NULL, last_corners, corners, last_corner_count,
               cvSize(10,10), 3, corner_status, NULL, crit, 0);
           cvReleaseImage(&last_deshaked_frame);
+
+          /* Calculate angle */
+          // FIXME: Use only found
+          CvMat last_cc    = cvMat(last_corner_count, 1, CV_32FC2, last_corners);
+          CvMat current_cc = cvMat(last_corner_count, 1, CV_32FC2, corners);
+          CvMat *transformation = cvCreateMat(2, 3, CV_32FC1);
+          cvEstimateRigidTransform(&last_cc, &current_cc, transformation, 0);
+          double da = atan2(cvmGet(transformation,1,0), cvmGet(transformation,0,0));
+          rotation_angle += da;
+          printf("angle: %f\n", rotation_angle);
         }
 
         /* Create mask for dynamic feature detection, display mask in target */
@@ -73,7 +86,7 @@ int main(int argc, char **argv) {
         IplImage *tracking_mask = mask(deshaked_frame, &target);
 
         /* Detect dynamic features in mask */
-        if(current_frame%3 == 0) {
+        if(current_frame == 0) {
           findTrackingPoints(deshaked_frame, tracking_mask, &corner_count, corners);
         }
 
@@ -84,12 +97,12 @@ int main(int argc, char **argv) {
 
 
         /* Highlight detected features */
-        //for(int i=0;i<corner_count;i++) {
-        //  cvCircle(target, cvPointFrom32f(corners[i]), 2, CV_RGB(255,255,255), 1, CV_AA, 0);
-        //}
         for(int i=0;i<corner_count;i++) {
-          cvCircle(target, cvPointFrom32f(corners[i]), 5, CV_RGB(255,255,255), -1, CV_AA, 0);
+          cvCircle(target, cvPointFrom32f(corners[i]), 2, CV_RGB(255,255,255), 1, CV_AA, 0);
         }
+
+        /* Show current rotation angle */
+        cvLine(target, cvPoint(640,355), cvPoint(640+200*cos(rotation_angle), 355+200*sin(rotation_angle)), CV_RGB(255,0,0), 1, CV_AA, 0);
 
         /* Free mem */
         cvReleaseImage(&tracking_mask);
