@@ -55,22 +55,5 @@ IplImage* mask(IplImage *source, IplImage **visual) {
     cvRectangle(temp_mask, tracking_sub[i], tracking_sub[i+1], notrack, -1, 8, 0);
   }
 
-  /* Convert to grey for corner tracking */
-  IplImage* temp_grey = cvCreateImage(cvGetSize(source), IPL_DEPTH_8U, 1);
-  cvCvtColor(source, temp_grey, CV_RGB2GRAY);
-
-  #define MAX_CORNERS 30
-  CvPoint2D32f corners[MAX_CORNERS];
-  int corner_count=MAX_CORNERS;
-  cvGoodFeaturesToTrack(temp_grey, NULL, NULL, corners, &corner_count, 0.05,
-      20, temp_mask, 8, 1, 0.06);
-  cvReleaseImage(&temp_grey);
-  //cvReleaseImage(&temp_mask);
-
-  /* Highlight corners */
-  for(int i=0;i<corner_count;i++) {
-    cvCircle(vis, cvPointFrom32f(corners[i]), 2, CV_RGB(255,255,255), 1, CV_AA, 0);
-  }
-
   return temp_mask;
 }

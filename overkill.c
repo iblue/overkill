@@ -4,6 +4,7 @@
 #include "features.h"
 #include "deshaker.h"
 #include "mask.h"
+#include "optiflow.h"
 #include "inline.h"
 
 int main(int argc, char **argv) {
@@ -38,17 +39,25 @@ int main(int argc, char **argv) {
 
         trackFeatures(frame, current_frame);
 
-        IplImage *temp = cvCreateImage(cvSize(frame->width,frame->height),
+        IplImage *deshaked_frame = cvCreateImage(cvSize(frame->width,frame->height),
           frame->depth, frame->nChannels);
 
-        /*IplImage *target = cvCreateImage(cvSize(frame->width,frame->height),
-          frame->depth, frame->nChannels);*/
         IplImage *target;
 
-        deshake(frame, temp);
-        IplImage *tracking_mask = mask(temp, &target);
+        deshake(frame, deshaked_frame);
+        IplImage *tracking_mask = mask(deshaked_frame, &target);
+
+        int corner_count = 30;
+        CvPoint2D32f corners[corner_count];
+        findTrackingPoints(deshaked_frame, tracking_mask, &corner_count, corners);
+
+        /* Highlight corners */
+        for(int i=0;i<corner_count;i++) {
+          cvCircle(target, cvPointFrom32f(corners[i]), 2, CV_RGB(255,255,255), 1, CV_AA, 0);
+        }
+
         cvReleaseImage(&tracking_mask);
-        cvReleaseImage(&temp);
+        cvReleaseImage(&deshaked_frame);
 
         /* display frame into window and write to outfile */
         cvShowImage("Overkill", target);
