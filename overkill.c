@@ -34,7 +34,8 @@ int main(int argc, char **argv) {
     IplImage* last_deshaked_frame = NULL;
 
     /* For dynamic feature tracking */
-    #define MAX_CORNERS 30
+    #define MAX_CORNERS 40
+    #define MIN_CORNERS 20
     int corner_count = MAX_CORNERS;
     CvPoint2D32f corners[MAX_CORNERS];
     int last_corner_count = MAX_CORNERS;
@@ -136,9 +137,13 @@ int main(int argc, char **argv) {
         }
 
         /* Detect dynamic features in mask */
-        if(current_frame == 0 || corner_count < 10) {
+        if(current_frame == 0 || corner_count < MIN_CORNERS) {
+          corner_count = MAX_CORNERS;
           findTrackingPoints(deshaked_frame, tracking_mask, &corner_count, corners);
         }
+
+        /* We need lots of corners to track for the rigid transform to converge */
+        //assert(corner_count > MIN_CORNERS/2);
 
         /* create last frame for optical flow detection */
         last_deshaked_frame = cvCloneImage(deshaked_frame);

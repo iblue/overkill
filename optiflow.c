@@ -9,7 +9,7 @@ void findTrackingPoints(IplImage *deshaked_frame, IplImage *mask, int* max_corne
   cvCvtColor(deshaked_frame, temp_grey, CV_RGB2GRAY);
 
   cvGoodFeaturesToTrack(temp_grey, NULL, NULL, corners, max_corners, 0.05,
-      20, mask, 8, 1, 0.01);
+      30, mask, 10, 1, 0.04);
 
   /* Refine by subpixel corner detection */
 
