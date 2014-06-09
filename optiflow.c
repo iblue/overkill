@@ -10,5 +10,16 @@ void findTrackingPoints(IplImage *deshaked_frame, IplImage *mask, int* max_corne
 
   cvGoodFeaturesToTrack(temp_grey, NULL, NULL, corners, max_corners, 0.05,
       20, mask, 8, 1, 0.01);
+
+  /* Refine by subpixel corner detection */
+
+  /* Termination criteria */
+  int type = CV_TERMCRIT_ITER|CV_TERMCRIT_EPS;
+  double eps = 0.01;
+  int iter = 10;
+
+  CvTermCriteria crit = cvTermCriteria(type,iter,eps);
+
+  cvFindCornerSubPix(temp_grey, corners, *max_corners, cvSize(5,5), cvSize(-1,-1), crit);
   cvReleaseImage(&temp_grey);
 }

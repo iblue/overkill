@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
         }
 
         /* Show current rotation angle */
-        cvLine(target, cvPoint(640,355), cvPoint(640+200*cos(rotation_angle), 355+200*sin(rotation_angle)), CV_RGB(255,0,0), 1, CV_AA, 0);
+        cvLine(target, cvPoint(640,355), cvPoint(640+200*cos(rotation_angle), 355+200*sin(rotation_angle)), CV_RGB(255,0,0), 5, CV_AA, 0);
 
         /* Free mem */
         cvReleaseImage(&tracking_mask);
