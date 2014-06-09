@@ -28,6 +28,14 @@ int main(int argc, char **argv) {
 
     /* Create IplImage to point to each frame */
     IplImage* frame;
+    IplImage* last_deshaked_frame = NULL;
+
+    /* For dynamic feature tracking */
+    int corner_count = 30;
+    CvPoint2D32f corners[corner_count];
+    int last_corner_count = corner_count;
+    CvPoint2D32f last_corners[corner_count];
+    char corner_status[corner_count];
 
     /* Loop until frame ended or ESC is pressed */
     while(1) {
@@ -46,18 +54,41 @@ int main(int argc, char **argv) {
           frame->depth, frame->nChannels);
         deshake(frame, deshaked_frame);
 
+        /* Detect optical flow to last frame */
+        if(last_deshaked_frame) {
+          /* Termination criteria */
+          int type = CV_TERMCRIT_ITER|CV_TERMCRIT_EPS;
+          double eps = 0.01;
+          int iter = 10;
+
+          CvTermCriteria crit = cvTermCriteria(type,iter,eps);
+          cvCalcOpticalFlowPyrLK(last_deshaked_frame, deshaked_frame,
+              NULL, NULL, last_corners, corners, last_corner_count,
+              cvSize(10,10), 3, corner_status, NULL, crit, 0);
+          cvReleaseImage(&last_deshaked_frame);
+        }
+
         /* Create mask for dynamic feature detection, display mask in target */
         IplImage *target;
         IplImage *tracking_mask = mask(deshaked_frame, &target);
 
         /* Detect dynamic features in mask */
-        int corner_count = 30;
-        CvPoint2D32f corners[corner_count];
-        findTrackingPoints(deshaked_frame, tracking_mask, &corner_count, corners);
+        if(current_frame%3 == 0) {
+          findTrackingPoints(deshaked_frame, tracking_mask, &corner_count, corners);
+        }
+
+        /* create last frame for optical flow detection */
+        last_deshaked_frame = cvCloneImage(deshaked_frame);
+        last_corner_count = corner_count;
+        memcpy(last_corners, corners, corner_count*sizeof(corners[0]));
+
 
         /* Highlight detected features */
+        //for(int i=0;i<corner_count;i++) {
+        //  cvCircle(target, cvPointFrom32f(corners[i]), 2, CV_RGB(255,255,255), 1, CV_AA, 0);
+        //}
         for(int i=0;i<corner_count;i++) {
-          cvCircle(target, cvPointFrom32f(corners[i]), 2, CV_RGB(255,255,255), 1, CV_AA, 0);
+          cvCircle(target, cvPointFrom32f(corners[i]), 5, CV_RGB(255,255,255), -1, CV_AA, 0);
         }
 
         /* Free mem */
