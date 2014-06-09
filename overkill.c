@@ -9,6 +9,7 @@
 #include "inline.h"
 
 float rotation_angle=0.0;
+float feature_angle=0.0;
 
 void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_pts, int size);
 double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size);
@@ -36,6 +37,7 @@ int main(int argc, char **argv) {
     IplImage* frame;
     IplImage* current_deshaked_frame = NULL;
     IplImage* last_deshaked_frame = NULL;
+    IplImage* feature_frame = NULL;
 
     /* For dynamic feature tracking */
     int corner_count = MAX_CORNERS;
@@ -72,6 +74,17 @@ int main(int argc, char **argv) {
 
         /* Detect dynamic features in mask, save to tracking_points */
         if(current_frame == 0 || corner_count < MIN_CORNERS) {
+          /* Detect flow to last dynamic frame for correction */
+          if(feature_frame) {
+            /* Calculate angle between features */
+            // FIXME: Does not work, because some corners left.
+            // Also does not work because rotation is ambigious
+            //feature_angle += angle(tracking_points, last_corners, corner_count);
+            //rotation_angle = feature_angle;
+
+            cvReleaseImage(&feature_frame);
+          }
+
           tracking_point_count = MAX_CORNERS;
           findTrackingPoints(current_deshaked_frame, tracking_mask,
               &tracking_point_count, tracking_points);
@@ -79,6 +92,9 @@ int main(int argc, char **argv) {
           memcpy(corners, tracking_points, tracking_point_count*sizeof(corners[0]));
           memcpy(last_corners, tracking_points, tracking_point_count*sizeof(corners[0]));
           corner_count = tracking_point_count;
+
+          /* Same frame for later detection */
+          feature_frame = cvCloneImage(current_deshaked_frame);
         }
 
         /* Determine movement of features across frames */
@@ -87,6 +103,8 @@ int main(int argc, char **argv) {
         assert(corner_count > 0);
 
         /* Calculate angle between features */
+        double da = angle(last_corners, corners, corner_count);
+        printf("da: %f\n",da);
         rotation_angle += angle(last_corners, corners, corner_count);
 
         /* Rendering */
@@ -143,7 +161,8 @@ void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_
   }
 
   /* Show current rotation angle */
-  cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(rotation_angle), 358+200*sin(rotation_angle)), CV_RGB(0,255,0), 2, CV_AA, 0);
+  double real_ang = rotation_angle*1.08;
+  cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(real_ang), 358+200*sin(real_ang)), CV_RGB(0,255,0), 2, CV_AA, 0);
 }
 
 double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size) {
