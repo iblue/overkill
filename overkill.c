@@ -46,7 +46,8 @@ int main(int argc, char **argv) {
         IplImage *target;
 
         deshake(frame, temp);
-        target = mask(temp);
+        IplImage *tracking_mask = mask(temp, &target);
+        cvReleaseImage(&tracking_mask);
         cvReleaseImage(&temp);
 
         /* display frame into window and write to outfile */

@@ -1,1 +1,1 @@
-IplImage* mask(IplImage*);
+IplImage* mask(IplImage*, IplImage**);
