@@ -21,4 +21,4 @@ mask.o: mask.c mask.h
 
 .PHONY: clean
 clean:
-	rm -f overkill features.o overkill.o deshaker.o
+	rm -f overkill features.o overkill.o deshaker.o optiflow.o mask.o
