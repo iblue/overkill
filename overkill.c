@@ -1,6 +1,7 @@
 #include <cv.h>
 #include <highgui.h>
 #include <stdio.h>
+#include "overkill.h"
 #include "features.h"
 #include "deshaker.h"
 #include "mask.h"
@@ -9,10 +10,7 @@
 
 float rotation_angle=0.0;
 
-void opticalFlow(IplImage* prev, IplImage* curr, IplImage *mask, CvPoint2D32f*
-    prev_pts, CvPoint2D32f *curr_pts, int* pts_cnt);
 void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_pts, int size);
-int filterPts(CvPoint2D32f *pts, char* status, int size);
 double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size);
 
 int main(int argc, char **argv) {
@@ -40,8 +38,6 @@ int main(int argc, char **argv) {
     IplImage* last_deshaked_frame = NULL;
 
     /* For dynamic feature tracking */
-    #define MAX_CORNERS 40
-    #define MIN_CORNERS 10
     int corner_count = MAX_CORNERS;
     CvPoint2D32f corners[MAX_CORNERS];
     CvPoint2D32f last_corners[MAX_CORNERS];
@@ -148,59 +144,6 @@ void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_
 
   /* Show current rotation angle */
   cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(rotation_angle), 358+200*sin(rotation_angle)), CV_RGB(0,255,0), 2, CV_AA, 0);
-}
-
-void opticalFlow(IplImage* prev, IplImage* curr, IplImage *mask, CvPoint2D32f*
-    prev_pts, CvPoint2D32f *curr_pts, int* pts_cnt) {
-
-  static char corner_status[MAX_CORNERS];
-
-  if(!prev) {
-    return;
-  }
-
-  /* Termination criteria: FIXME static */
-  int type = CV_TERMCRIT_ITER|CV_TERMCRIT_EPS;
-  double eps = 0.01;
-  int iter = 10;
-
-  CvTermCriteria crit = cvTermCriteria(type,iter,eps);
-  cvCalcOpticalFlowPyrLK(prev, curr,
-      NULL, NULL, prev_pts, curr_pts, *pts_cnt,
-      cvSize(10,10), 3, corner_status, NULL, crit, 0);
-
-  /* Remove points that left the tracking mask */
-  for(int i=0;i<*pts_cnt;i++) {
-    /* Not found by flow tracking -> skip */
-    if(corner_status[i] == 0) {
-      continue;
-    }
-
-    /* Point left the tracking mask */
-    CvPoint pnt = cvPointFrom32f(curr_pts[i]);
-    int col = mask->imageData[1280*pnt.y+pnt.x];
-    if(col == 0) {
-      corner_status[i] = 0;
-      printf("Feature %d left bounds\n", i);
-    }
-  }
-
-  /* Remove all points marked for deletion */
-  filterPts(curr_pts, corner_status, *pts_cnt);
-  *pts_cnt = filterPts(prev_pts, corner_status, *pts_cnt);
-}
-
-int filterPts(CvPoint2D32f *pts, char* status, int size) {
-  CvPoint2D32f new[MAX_CORNERS];
-
-  int pos=0;
-  for(int i=0;i<size;i++) {
-    if(status[i] != 0) {
-      new[pos++] = pts[i];
-    }
-  }
-  memcpy(pts, new, pos*sizeof(pts[0]));
-  return pos;
 }
 
 double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size) {
