@@ -56,7 +56,7 @@ void opticalFlow(IplImage* prev, IplImage* curr, IplImage *mask, CvPoint2D32f*
     int col = mask->imageData[1280*pnt.y+pnt.x];
     if(col == 0) {
       corner_status[i] = 0;
-      printf("Feature %d left bounds\n", i);
+      //printf("Feature %d left bounds\n", i);
     }
   }
 

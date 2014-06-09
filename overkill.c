@@ -1,12 +1,17 @@
 #include <cv.h>
 #include <highgui.h>
 #include <stdio.h>
+#include <math.h>
 #include "overkill.h"
 #include "features.h"
 #include "deshaker.h"
 #include "mask.h"
 #include "optiflow.h"
 #include "inline.h"
+
+#ifndef M_PI
+#define M_PI (3.14159265358979323846)
+#endif
 
 float rotation_angle=0.0;
 float feature_angle=0.0;
@@ -88,7 +93,7 @@ int main(int argc, char **argv) {
           tracking_point_count = MAX_CORNERS;
           findTrackingPoints(current_deshaked_frame, tracking_mask,
               &tracking_point_count, tracking_points);
-          printf("Found %d tracking points\n", tracking_point_count);
+          //printf("Found %d tracking points\n", tracking_point_count);
           memcpy(corners, tracking_points, tracking_point_count*sizeof(corners[0]));
           memcpy(last_corners, tracking_points, tracking_point_count*sizeof(corners[0]));
           corner_count = tracking_point_count;
@@ -100,11 +105,14 @@ int main(int argc, char **argv) {
         /* Determine movement of features across frames */
         opticalFlow(last_deshaked_frame, current_deshaked_frame, tracking_mask,
             last_corners, corners, &corner_count);
-        assert(corner_count > 0);
 
         /* Calculate angle between features */
-        double da = angle(last_corners, corners, corner_count);
-        rotation_angle += da;
+        if(corner_count > 0) {
+          double da = angle(last_corners, corners, corner_count);
+          rotation_angle += da;
+        } else {
+          printf("Tracking lost.\n");
+        }
 
         /* Try resync */
         {
@@ -115,6 +123,8 @@ int main(int argc, char **argv) {
           CvMat to   = cvMat(1, 1, CV_32FC2, &to_coords);
           cvTransform(&from, &to, ok_transformation, NULL);
           */
+          static int last_frame = 0x0b4df00d; /* Last frame when we had sync */
+          if(last_frame == 0x0b4df00d) last_frame = current_frame;
 
           CvPoint v;
           v = last_location[FEATURE_ZERO];
@@ -126,10 +136,47 @@ int main(int argc, char **argv) {
             tx -= 640;
             ty -= 358;
             double norm = sqrt(pow(tx,2) + pow(ty,2));
-            printf("%f,%f (%f) -> %f,%f\n",tx,ty,norm,tx/norm,ty/norm);
-            rotation_angle = sin(ty/norm);
-            printf("sync %f\n", rotation_angle);
+
+            //printf("%f,%f (%f) -> %f,%f\n",tx,ty,norm,tx/norm,ty/norm);
+
+            double revol;
+            if(rotation_angle < 0 ) {
+              revol = ceil(rotation_angle/(2*M_PI));
+            } else {
+              revol = floor(rotation_angle/(2*M_PI));
+            }
+            double remainder = rotation_angle - revol*2*M_PI;
+            double new_remainder = sin(ty/norm);
+
+            /* If there are more than 20 frames between syncs and more than 90
+             * degrees off, but no revolutions counted, add one */
+            if(current_frame - 20 > last_frame && abs(remainder - new_remainder) > 0.5*M_PI) {
+              printf("missing revol detected.\n");
+              if(rotation_angle < 0)
+                revol-=1.0;
+              else
+                revol+=1.0;
+            }
+            last_frame = current_frame;
+
+
+            //printf("remainder: %f, new: %f\n", remainder, new_remainder);
+            rotation_angle = revol*2*M_PI + new_remainder;
+            //printf("sync %f\n", rotation_angle);
           }
+        }
+
+        // Display angle
+        {
+          double revol;
+          if(rotation_angle < 0 ) {
+            revol = ceil(rotation_angle/(2*M_PI));
+          } else {
+            revol = floor(rotation_angle/(2*M_PI));
+          }
+          double remainder = rotation_angle - revol*2*M_PI;
+          double degrees   = remainder/(2*M_PI)*360;
+          printf("position: %2.0f revolutions, %2.0f degrees\n", revol, degrees);
         }
 
         /* Rendering */
