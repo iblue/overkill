@@ -17,6 +17,10 @@ float current_error=0.0;
 void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_pts, int size);
 double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size);
 
+#ifdef RENDER_INFO_TEXT
+void renderText(IplImage *target);
+#endif
+
 int main(int argc, char **argv) {
     if(argc != 4) {
         printf("Overkill: Motion Tracking Prototype\n\n"
@@ -202,7 +206,9 @@ int main(int argc, char **argv) {
           cvReleaseImage(&target);
           target = new;
         }
-
+#ifdef RENDER_INFO_TEXT
+        renderText(target);
+#endif
 
         /* display frame into window and write to outfile */
         cvShowImage("Overkill", target);
@@ -226,6 +232,30 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+#ifdef RENDER_INFO_TEXT
+void renderText(IplImage *target) {
+  CvFont font;
+  cvInitFont(&font, CV_FONT_HERSHEY_SIMPLEX, 1, 1, 0, 1, CV_AA);
+
+  char value[40];
+  char lost[] = "Tracking lost.";
+
+  double degrees   = rotation_angle/(2*M_PI)*360;
+  if(degrees < 0) {
+    degrees += 360.0;
+  }
+  double error = current_error/(2*M_PI)*360;
+
+  if(error > 90.0) {
+    memcpy(value, lost, sizeof(lost));
+   } else {
+    snprintf((char *)&value, sizeof(value)-1, "%d + %2.1f+-%2.1f",
+        revolutions, degrees, error);
+   }
+  cvPutText(target, (const char*)value, cvPoint(10,30), &font, CV_RGB(0,0,0));
+}
+#endif
+
 /* Highlights some global data in the target frame */
 void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_pts, int size) {
 
@@ -248,7 +278,10 @@ void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_
   cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(real_ang), 358+200*sin(real_ang)), CV_RGB(0,255,0), 1, CV_AA, 0);
   cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(err_p), 358+200*sin(err_p)), CV_RGB(255,0,0), 1, CV_AA, 0);
   cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(err_n), 358+200*sin(err_n)), CV_RGB(255,0,0), 1, CV_AA, 0);
+
 }
+
+
 
 double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size) {
   CvMat last_cc    = cvMat(size, 1, CV_32FC2, pts1);

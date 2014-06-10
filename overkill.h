@@ -3,4 +3,6 @@
 
 //#define RENDER_DEBUG
 #define RENDER_INFO
+#define RENDER_INFO_TEXT
+
 extern float rotation_angle;
