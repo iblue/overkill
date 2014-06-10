@@ -118,8 +118,9 @@ int main(int argc, char **argv) {
             current_error = M_PI;
             printf("Tracking lost.\n");
           } else {
-            double add_err = fabs(pow(da*8.0,2)*0.05); /* err accumulates: 5% of speed */
-            //printf("da: %f, err: %f\n", da, add_err);
+            double add_err = fabs(pow(da*8.0,2)*0.05); /* heuristic error values */
+
+            // heuristic value correction
             current_error += add_err;
           }
         } else {
@@ -191,6 +192,17 @@ int main(int argc, char **argv) {
         /* Free mem */
         cvReleaseImage(&tracking_mask);
         cvReleaseImage(&current_deshaked_frame);
+
+        /* Invert deshake */
+        {
+          IplImage *new = cvCreateImage(cvSize(target->width,target->height),
+              target->depth, target->nChannels);
+          cvWarpAffine(target, new, ok_transformation,
+              CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP, CV_RGB(0,0,0));
+          cvReleaseImage(&target);
+          target = new;
+        }
+
 
         /* display frame into window and write to outfile */
         cvShowImage("Overkill", target);
