@@ -24,7 +24,8 @@ void initFeatures(const char* cache_file) {
   f[FEATURE_BOTTOM_RIGHT] = cvLoadImage(PATH "bottom-right.png", 1);
 
   f[FEATURE_ZERO] = cvLoadImage(PATH "zero.png", 1);
-  f[FEATURE_90]   = cvLoadImage(PATH "90.png", 1);
+  f[FEATURE_90]   = cvLoadImage(PATH "90.png",   1);
+  f[FEATURE_270]  = cvLoadImage(PATH "270.png",   1);
 
   /* Initialize result matrices and frame syncs */
   for(int i=0;i<FEATURE_COUNT;i++) {
@@ -132,12 +133,13 @@ void trackFeatures(IplImage *frame, int current_frame) {
   }
 }
 
-
-void resyncByStatic(int current_frame, IplImage* target) {
+/* returns sync zone if synced, -1 otherwise */
+int resyncByStatic(int current_frame, IplImage* target) {
   /* Bounding boxes for features */
   static double bounding[] = {
     820, 790, 420, 300, /* x,x,y,y for FEATURE_ZERO */
     800, 500, 540, 485, /* FEATURE_90 */
+    750, 500, 225, 170, /* FEATURE_270 */
   };
 
   for(int i=STATIC_FEATURE_COUNT;i<FEATURE_COUNT;i++) {
@@ -165,13 +167,13 @@ void resyncByStatic(int current_frame, IplImage* target) {
     }
 
     if(tx < box_x1 && tx > box_x2 && ty < box_y1 && ty > box_y2) {
-      printf("Marker in zone %d: (%f,%f)\n",i-STATIC_FEATURE_COUNT,tx,ty);
+      //printf("Marker in zone %d: (%f,%f)\n",i-STATIC_FEATURE_COUNT,tx,ty);
       /* FIXME: Hardcoded center */
       tx -= 640;
       ty -= 358;
       double norm = sqrt(pow(tx,2) + pow(ty,2));
 
-      printf("%f,%f (%f) -> %f,%f\n",tx,ty,norm,tx/norm,ty/norm);
+      //printf("%f,%f (%f) -> %f,%f\n",tx,ty,norm,tx/norm,ty/norm);
 
       double revol;
       if(rotation_angle < 0 ) {
@@ -181,7 +183,7 @@ void resyncByStatic(int current_frame, IplImage* target) {
       }
       double remainder = rotation_angle - revol*2*M_PI;
       double new_remainder = atan2(ty/norm,tx/norm);
-      printf("angle: %f\n",new_remainder/(2*M_PI)*360);
+      //printf("angle: %f\n",new_remainder/(2*M_PI)*360);
 
       /* If there are more than 20 frames between syncs and more than 90
        * degrees off, but no revolutions counted, add one */
@@ -198,6 +200,10 @@ void resyncByStatic(int current_frame, IplImage* target) {
       //printf("remainder: %f, new: %f\n", remainder, new_remainder);
       rotation_angle = revol*2*M_PI + new_remainder;
       //printf("sync %f\n", rotation_angle);
+
+      return i;
     }
   }
+
+  return -1;
 }

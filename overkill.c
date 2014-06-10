@@ -11,6 +11,7 @@
 
 float feature_angle=0.0;
 float rotation_angle = 0.0;
+float current_error=0.0;
 
 void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_pts, int size);
 double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size);
@@ -106,12 +107,33 @@ int main(int argc, char **argv) {
         if(corner_count > 0) {
           double da = angle(last_corners, corners, corner_count);
           rotation_angle += da;
+          if(da == 0.0) {
+            current_error = M_PI;
+            printf("Tracking lost.\n");
+          } else {
+            double add_err = fabs(pow(da*8.0,2)*0.05); /* err accumulates: 5% of speed */
+            printf("da: %f, err: %f\n", da, add_err);
+            current_error += add_err;
+          }
         } else {
+          current_error = M_PI;
           printf("Tracking lost.\n");
         }
 
+        if(current_error > M_PI) {
+          current_error = M_PI;
+        }
+
         /* Try resync */
-        resyncByStatic(current_frame, target);
+        int sync_zone = resyncByStatic(current_frame, target);
+
+        if(sync_zone == FEATURE_ZERO) {
+          /* Very good sync: Max 1.5 degrees error */
+          current_error = (1.5/360.0)*(2*M_PI);
+        } else if(sync_zone == FEATURE_90 || sync_zone == FEATURE_270) {
+          /* Other zones not so exact. About 2-3 degrees error */
+          current_error = (2.5/360.0)*(2*M_PI);
+        }
 
         // Display angle
         {
@@ -123,7 +145,8 @@ int main(int argc, char **argv) {
           }
           double remainder = rotation_angle - revol*2*M_PI;
           double degrees   = remainder/(2*M_PI)*360;
-          printf("position: %2.0f revolutions, %2.0f degrees\n", revol, degrees);
+          double error = current_error/(2*M_PI)*360;
+          printf("position: %2.0f revolutions, %2.0f degrees +- %2.0f\n", revol, degrees, error);
         }
 
         /* Rendering */
@@ -181,7 +204,11 @@ void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_
 
   /* Show current rotation angle */
   double real_ang = rotation_angle;
-  cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(real_ang), 358+200*sin(real_ang)), CV_RGB(0,255,0), 2, CV_AA, 0);
+  double err_p = rotation_angle + current_error;
+  double err_n = rotation_angle - current_error;
+  cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(real_ang), 358+200*sin(real_ang)), CV_RGB(0,255,0), 1, CV_AA, 0);
+  cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(err_p), 358+200*sin(err_p)), CV_RGB(255,0,0), 1, CV_AA, 0);
+  cvLine(target, cvPoint(640,358), cvPoint(640+200*cos(err_n), 358+200*sin(err_n)), CV_RGB(255,0,0), 1, CV_AA, 0);
 }
 
 double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size) {
