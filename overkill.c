@@ -252,7 +252,7 @@ void renderText(IplImage *target) {
     snprintf((char *)&value, sizeof(value)-1, "%d + %2.1f+-%2.1f",
         revolutions, degrees, error);
    }
-  cvPutText(target, (const char*)value, cvPoint(10,30), &font, CV_RGB(0,0,0));
+  cvPutText(target, (const char*)value, cvPoint(50,680), &font, CV_RGB(0,0,0));
 }
 #endif
 
