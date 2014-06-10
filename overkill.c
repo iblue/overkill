@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
         }
 
         /* Try resync */
-        resyncByStatic(current_frame);
+        resyncByStatic(current_frame, target);
 
         // Display angle
         {

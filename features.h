@@ -19,4 +19,4 @@ FILE* feature_cache_fh;
 void initFeatures(const char* feature_cache_file);
 CvPoint matchFeature(IplImage*, int);
 void trackFeatures(IplImage*, int);
-void resyncByStatic(int current_frame);
+void resyncByStatic(int, IplImage*);

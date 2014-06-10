@@ -131,7 +131,7 @@ void trackFeatures(IplImage *frame, int current_frame) {
 }
 
 
-void resyncByStatic(int current_frame) {
+void resyncByStatic(int current_frame, IplImage* target) {
   /* Bounding boxes for features */
   static double bounding[] = {
     820, 790, 420, 300, /* x,x,y,y for FEATURE_ZERO */
@@ -153,6 +153,13 @@ void resyncByStatic(int current_frame) {
     double box_x2 = bounding[(i-STATIC_FEATURE_COUNT)*4+1];
     double box_y1 = bounding[(i-STATIC_FEATURE_COUNT)*4+2];
     double box_y2 = bounding[(i-STATIC_FEATURE_COUNT)*4+3];
+
+    assert(box_x1 > box_x2);
+    assert(box_y1 > box_y2);
+
+    if(target) {
+      cvRectangle(target, cvPoint(box_x1, box_y1), cvPoint(box_x2, box_y2), CV_RGB(255, 255, 0), 1, 8, 0);
+    }
 
     if(tx < box_x1 && tx > box_x2 && ty < box_y1 && ty > box_y2) {
       /* FIXME: Hardcoded center */
