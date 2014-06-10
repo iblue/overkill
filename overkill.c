@@ -24,11 +24,13 @@ void renderText(IplImage *target);
 #endif
 
 int main(int argc, char **argv) {
-    if(argc != 4) {
+    if(argc != 5) {
         printf("Overkill: Motion Tracking Prototype\n\n"
-               "Usage: %s <input video file> <output video file> <feature file>\n", argv[0]);
+               "Usage: %s <input video file> <output video file> <feature file> <csv out>\n", argv[0]);
         exit(1);
     }
+
+    FILE* csv_fh = fopen(argv[4],"w");
 
     /* Initialize static feature detection */
     initFeatures(argv[3]);
@@ -64,8 +66,11 @@ int main(int argc, char **argv) {
     while(1) {
         /* grab frame image, and retrieve */
         current_frame = cvGetCaptureProperty(capture, CV_CAP_PROP_POS_FRAMES);
+        int total_frames = cvGetCaptureProperty(capture, CV_CAP_PROP_FRAME_COUNT);
         current_time = cvGetCaptureProperty(capture, CV_CAP_PROP_POS_MSEC)/1000.0;
         frame = cvQueryFrame(capture);
+
+        printf("Processing frame %d/%d...\n", current_frame, total_frames);
 
         /* exit loop if fram is null / movie end */
         if(!frame) break;
@@ -180,8 +185,10 @@ int main(int argc, char **argv) {
             degrees += 360.0;
           }
           double error = current_error/(2*M_PI)*360;
-          printf("POS: revolutions: %d, degrees %2.1f +- %2.1f\n", revolutions,
-              degrees, error);
+          printf("%f: revolutions: %d, degrees %2.1f +- %2.1f\n", current_time,
+              revolutions, degrees, error);
+          // CSV output
+          fprintf(csv_fh, "%f,0.0,%f,%f\n", current_time, ((double)revolutions*2.0*M_PI)+rotation_angle, current_error);
         }
 
         /* Rendering */
