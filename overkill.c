@@ -10,7 +10,8 @@
 #include "inline.h"
 
 float feature_angle=0.0;
-float rotation_angle = 0.0;
+float rotation_angle = 0.0; /* normed -pi..pi */
+int revolutions=0;          /* real revolutions */
 float current_error=0.0;
 
 void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_pts, int size);
@@ -107,12 +108,18 @@ int main(int argc, char **argv) {
         if(corner_count > 0) {
           double da = angle(last_corners, corners, corner_count);
           rotation_angle += da;
+          if(rotation_angle > M_PI) {
+            rotation_angle -= 2*M_PI;
+          }
+          if(rotation_angle < -M_PI) {
+            rotation_angle += 2*M_PI;
+          }
           if(da == 0.0) {
             current_error = M_PI;
             printf("Tracking lost.\n");
           } else {
             double add_err = fabs(pow(da*8.0,2)*0.05); /* err accumulates: 5% of speed */
-            printf("da: %f, err: %f\n", da, add_err);
+            //printf("da: %f, err: %f\n", da, add_err);
             current_error += add_err;
           }
         } else {
@@ -135,18 +142,36 @@ int main(int argc, char **argv) {
           current_error = (2.5/360.0)*(2*M_PI);
         }
 
+        /* Revolution counter: Only if in sync and angle goes over zero mark */
+        double last_angle;
+        if(current_frame == 0) {
+          last_angle = rotation_angle;
+        }
+        if(current_frame != 0){
+          if(sync_zone == FEATURE_ZERO) {
+            //printf("in zerosync. last: %f, current: %f \n", last_angle, rotation_angle);
+            if(fabs(last_angle/(2*M_PI)*360.0) < 30.0) {
+              if(last_angle < 0 && rotation_angle > 0) { // prevent false positives
+                revolutions++;
+              } else if(last_angle > 0 && rotation_angle < 0) {
+                revolutions--;
+              }
+            }
+          }
+        }
+        last_angle = rotation_angle;
+
+
+
         // Display angle
         {
-          double revol;
-          if(rotation_angle < 0 ) {
-            revol = ceil(rotation_angle/(2*M_PI));
-          } else {
-            revol = floor(rotation_angle/(2*M_PI));
+          double degrees   = rotation_angle/(2*M_PI)*360;
+          if(degrees < 0) {
+            degrees += 360.0;
           }
-          double remainder = rotation_angle - revol*2*M_PI;
-          double degrees   = remainder/(2*M_PI)*360;
           double error = current_error/(2*M_PI)*360;
-          printf("position: %2.0f revolutions, %2.0f degrees +- %2.0f\n", revol, degrees, error);
+          printf("POS: revolutions: %d, degrees %2.1f +- %2.1f\n", revolutions,
+              degrees, error);
         }
 
         /* Rendering */

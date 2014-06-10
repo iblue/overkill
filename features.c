@@ -142,6 +142,8 @@ int resyncByStatic(int current_frame, IplImage* target) {
     750, 500, 225, 170, /* FEATURE_270 */
   };
 
+  int detected = -1;
+
   for(int i=STATIC_FEATURE_COUNT;i<FEATURE_COUNT;i++) {
     if(frame_sync[i] == -1) {
       frame_sync[i] = current_frame;
@@ -173,37 +175,17 @@ int resyncByStatic(int current_frame, IplImage* target) {
       ty -= 358;
       double norm = sqrt(pow(tx,2) + pow(ty,2));
 
-      //printf("%f,%f (%f) -> %f,%f\n",tx,ty,norm,tx/norm,ty/norm);
+      /* Check if within sane bounds. otherwise: false positive */
+      if(norm > 150.0 && norm < 190.0) {
+        rotation_angle = atan2(ty/norm,tx/norm);
+        frame_sync[i] = current_frame;
 
-      double revol;
-      if(rotation_angle < 0 ) {
-        revol = ceil(rotation_angle/(2*M_PI));
+        detected = i;
       } else {
-        revol = floor(rotation_angle/(2*M_PI));
+        printf("norm: %f out of bounds\n", norm);
       }
-      double remainder = rotation_angle - revol*2*M_PI;
-      double new_remainder = atan2(ty/norm,tx/norm);
-      //printf("angle: %f\n",new_remainder/(2*M_PI)*360);
-
-      /* If there are more than 20 frames between syncs and more than 90
-       * degrees off, but no revolutions counted, add one */
-      if(current_frame - 20 > frame_sync[i] && abs(remainder - new_remainder) > 0.5*M_PI) {
-        printf("missing revol detected.\n");
-        if(rotation_angle < 0)
-          revol-=1.0;
-        else
-          revol+=1.0;
-      }
-      frame_sync[i] = current_frame;
-
-
-      //printf("remainder: %f, new: %f\n", remainder, new_remainder);
-      rotation_angle = revol*2*M_PI + new_remainder;
-      //printf("sync %f\n", rotation_angle);
-
-      return i;
     }
   }
 
-  return -1;
+  return detected;
 }
