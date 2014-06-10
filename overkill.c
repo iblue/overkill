@@ -13,6 +13,8 @@ float feature_angle=0.0;
 float rotation_angle = 0.0; /* normed -pi..pi */
 int revolutions=0;          /* real revolutions */
 float current_error=0.0;
+float current_time=0.0;
+int current_frame=0;
 
 void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_pts, int size);
 double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size);
@@ -31,8 +33,10 @@ int main(int argc, char **argv) {
     /* Initialize static feature detection */
     initFeatures(argv[3]);
 
+#ifdef RENDER_SCREEN
     /* Create a window */
     cvNamedWindow("Overkill", CV_WINDOW_AUTOSIZE);
+#endif
 
     /* capture frame from video file */
     CvCapture* capture = cvCreateFileCapture(argv[1]);
@@ -59,7 +63,8 @@ int main(int argc, char **argv) {
     /* Loop until frame ended or ESC is pressed */
     while(1) {
         /* grab frame image, and retrieve */
-        int current_frame = cvGetCaptureProperty(capture, CV_CAP_PROP_POS_FRAMES);
+        current_frame = cvGetCaptureProperty(capture, CV_CAP_PROP_POS_FRAMES);
+        current_time = cvGetCaptureProperty(capture, CV_CAP_PROP_POS_MSEC)/1000.0;
         frame = cvQueryFrame(capture);
 
         /* exit loop if fram is null / movie end */
@@ -211,7 +216,9 @@ int main(int argc, char **argv) {
 #endif
 
         /* display frame into window and write to outfile */
+#ifdef RENDER_SCREEN
         cvShowImage("Overkill", target);
+#endif
         cvWriteFrame(output, target);
 
         /* Free target mem */
@@ -219,16 +226,19 @@ int main(int argc, char **argv) {
         /* Frame is released automatically */
 
         /* if ESC or q is pressed then exit loop */
+#ifdef RENDER_SCREEN
         char c = cvWaitKey(33);
         if(c==27 || c == 'q') break;
+#endif
     }
 
     /* destroy pointer to capturing */
     cvReleaseCapture(&capture);
 
     /* delete window */
+#ifdef RENDER_SCREEN
     cvDestroyWindow("Overkill");
-
+#endif
     return 0;
 }
 
@@ -249,8 +259,8 @@ void renderText(IplImage *target) {
   if(error > 90.0) {
     memcpy(value, lost, sizeof(lost));
    } else {
-    snprintf((char *)&value, sizeof(value)-1, "%d + %2.1f+-%2.1f",
-        revolutions, degrees, error);
+    snprintf((char *)&value, sizeof(value)-1, "%f: %d + %2.1f+-%2.1f",
+        current_time, revolutions, degrees, error);
    }
   cvPutText(target, (const char*)value, cvPoint(50,680), &font, CV_RGB(0,0,0));
 }
