@@ -229,6 +229,7 @@ int main(int argc, char **argv) {
 /* Highlights some global data in the target frame */
 void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_pts, int size) {
 
+#ifdef RENDER_DEBUG
   /* Highlight current feature position */
   for(int i=0;i<size;i++) {
     cvCircle(target, cvPointFrom32f(curr_pts[i]), 2, CV_RGB(255,255,255), 1, CV_AA, 0);
@@ -238,6 +239,7 @@ void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_
   for(int i=0;i<size;i++) {
     cvLine(target, cvPointFrom32f(prev_pts[i]), cvPointFrom32f(curr_pts[i]), CV_RGB(127,0,127), 1, 4, 0);
   }
+#endif
 
   /* Show current rotation angle */
   double real_ang = rotation_angle;

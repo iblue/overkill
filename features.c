@@ -124,12 +124,14 @@ void trackFeatures(IplImage *frame, int current_frame) {
 
     /* Draw marker */
     /* FIXME: Modifying the current frame is not allowed by OpenCV */
+#ifdef RENDER_DEBUG
     CvScalar color = (current_frame % 2 == 0) ? CV_RGB(255,0,0):  CV_RGB(0,255,0);
     if(stable[i] == 0) {
       color = CV_RGB(255,255,0);
     }
 
     cvCircle(frame, location, 3, color, 1, CV_AA, 0);
+#endif
   }
 }
 
@@ -164,9 +166,11 @@ int resyncByStatic(int current_frame, IplImage* target) {
     assert(box_x1 > box_x2);
     assert(box_y1 > box_y2);
 
+#ifdef RENDER_DEBUG
     if(target) {
       cvRectangle(target, cvPoint(box_x1, box_y1), cvPoint(box_x2, box_y2), CV_RGB(255, 255, 0), 1, 8, 0);
     }
+#endif
 
     if(tx < box_x1 && tx > box_x2 && ty < box_y1 && ty > box_y2) {
       //printf("Marker in zone %d: (%f,%f)\n",i-STATIC_FEATURE_COUNT,tx,ty);
