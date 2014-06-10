@@ -9,12 +9,8 @@
 #include "optiflow.h"
 #include "inline.h"
 
-#ifndef M_PI
-#define M_PI (3.14159265358979323846)
-#endif
-
-float rotation_angle=0.0;
 float feature_angle=0.0;
+float rotation_angle = 0.0;
 
 void highlightData(IplImage *target, CvPoint2D32f* curr_pts, CvPoint2D32f* prev_pts, int size);
 double angle(CvPoint2D32f *pts1, CvPoint2D32f *pts2, int size);
@@ -115,56 +111,7 @@ int main(int argc, char **argv) {
         }
 
         /* Try resync */
-        {
-          /* Bullshit does not work */
-          /*
-          CvPoint2D32f to_coords;
-          CvMat from = cvMat(1, 1, CV_32FC2, &last_location[FEATURE_ZERO]);
-          CvMat to   = cvMat(1, 1, CV_32FC2, &to_coords);
-          cvTransform(&from, &to, ok_transformation, NULL);
-          */
-          static int last_frame = 0x0b4df00d; /* Last frame when we had sync */
-          if(last_frame == 0x0b4df00d) last_frame = current_frame;
-
-          CvPoint v;
-          v = last_location[FEATURE_ZERO];
-          CvMat*       m = ok_transformation;
-          double tx = cvmGet(m,0,0)*v.x + cvmGet(m,0,1)*v.y + cvmGet(m,0,2);
-          double ty = cvmGet(m,1,0)*v.x + cvmGet(m,1,1)*v.y + cvmGet(m,1,2);
-
-          if(tx < 820 && tx > 790 && ty < 420 && ty > 300) { // FIXME: Check if at zero point location
-            tx -= 640;
-            ty -= 358;
-            double norm = sqrt(pow(tx,2) + pow(ty,2));
-
-            //printf("%f,%f (%f) -> %f,%f\n",tx,ty,norm,tx/norm,ty/norm);
-
-            double revol;
-            if(rotation_angle < 0 ) {
-              revol = ceil(rotation_angle/(2*M_PI));
-            } else {
-              revol = floor(rotation_angle/(2*M_PI));
-            }
-            double remainder = rotation_angle - revol*2*M_PI;
-            double new_remainder = sin(ty/norm);
-
-            /* If there are more than 20 frames between syncs and more than 90
-             * degrees off, but no revolutions counted, add one */
-            if(current_frame - 20 > last_frame && abs(remainder - new_remainder) > 0.5*M_PI) {
-              printf("missing revol detected.\n");
-              if(rotation_angle < 0)
-                revol-=1.0;
-              else
-                revol+=1.0;
-            }
-            last_frame = current_frame;
-
-
-            //printf("remainder: %f, new: %f\n", remainder, new_remainder);
-            rotation_angle = revol*2*M_PI + new_remainder;
-            //printf("sync %f\n", rotation_angle);
-          }
-        }
+        resyncByStatic(current_frame);
 
         // Display angle
         {

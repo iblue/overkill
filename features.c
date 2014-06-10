@@ -3,6 +3,10 @@
 #include <stdio.h> /* snprintf, f* */
 #include "features.h"
 #include "inline.h"
+#include "overkill.h"
+#include "deshaker.h"
+
+int frame_sync[FEATURE_COUNT];
 
 /* Loads feature templates and opens cache file */
 void initFeatures(const char* cache_file) {
@@ -20,9 +24,10 @@ void initFeatures(const char* cache_file) {
   f[FEATURE_BOTTOM_RIGHT] = cvLoadImage(PATH "bottom-right.png", 1);
   f[FEATURE_ZERO] = cvLoadImage(PATH "zero.png", 1);
 
-  /* Initialize result matrices */
+  /* Initialize result matrices and frame syncs */
   for(int i=0;i<FEATURE_COUNT;i++) {
     feature_results[i] = NULL;
+    frame_sync[i] = -1;
   }
 
   /* Cache file for holding feature positions, because feature dection is slow
@@ -97,7 +102,7 @@ void trackFeatures(IplImage *frame, int current_frame) {
       last_location[i] = location;
       stable[i]        = 1;
     }
- 
+
     if(i < STATIC_FEATURE_COUNT) {
       /* Calculate distance to last location. If distance too big -> skip marker */
       double distance = okDistance(&last_location[i], &location);
@@ -122,5 +127,65 @@ void trackFeatures(IplImage *frame, int current_frame) {
     }
 
     cvCircle(frame, location, 3, color, 1, CV_AA, 0);
+  }
+}
+
+
+void resyncByStatic(int current_frame) {
+  /* Bounding boxes for features */
+  static double bounding[] = {
+    820, 790, 420, 300, /* x,x,y,y for FEATURE_ZERO */
+  };
+
+  for(int i=STATIC_FEATURE_COUNT;i<FEATURE_COUNT;i++) {
+    if(frame_sync[i] == -1) {
+      frame_sync[i] = current_frame;
+    }
+
+    /* Transform to current */
+    CvPoint v;
+    v = last_location[FEATURE_ZERO];
+    CvMat*       m = ok_transformation;
+    double tx = cvmGet(m,0,0)*v.x + cvmGet(m,0,1)*v.y + cvmGet(m,0,2);
+    double ty = cvmGet(m,1,0)*v.x + cvmGet(m,1,1)*v.y + cvmGet(m,1,2);
+
+    double box_x1 = bounding[(i-STATIC_FEATURE_COUNT)*4];
+    double box_x2 = bounding[(i-STATIC_FEATURE_COUNT)*4+1];
+    double box_y1 = bounding[(i-STATIC_FEATURE_COUNT)*4+2];
+    double box_y2 = bounding[(i-STATIC_FEATURE_COUNT)*4+3];
+
+    if(tx < box_x1 && tx > box_x2 && ty < box_y1 && ty > box_y2) {
+      /* FIXME: Hardcoded center */
+      tx -= 640;
+      ty -= 358;
+      double norm = sqrt(pow(tx,2) + pow(ty,2));
+
+      //printf("%f,%f (%f) -> %f,%f\n",tx,ty,norm,tx/norm,ty/norm);
+
+      double revol;
+      if(rotation_angle < 0 ) {
+        revol = ceil(rotation_angle/(2*M_PI));
+      } else {
+        revol = floor(rotation_angle/(2*M_PI));
+      }
+      double remainder = rotation_angle - revol*2*M_PI;
+      double new_remainder = sin(ty/norm);
+
+      /* If there are more than 20 frames between syncs and more than 90
+       * degrees off, but no revolutions counted, add one */
+      if(current_frame - 20 > frame_sync[i] && abs(remainder - new_remainder) > 0.5*M_PI) {
+        printf("missing revol detected.\n");
+        if(rotation_angle < 0)
+          revol-=1.0;
+        else
+          revol+=1.0;
+      }
+      frame_sync[i] = current_frame;
+
+
+      //printf("remainder: %f, new: %f\n", remainder, new_remainder);
+      rotation_angle = revol*2*M_PI + new_remainder;
+      //printf("sync %f\n", rotation_angle);
+    }
   }
 }
