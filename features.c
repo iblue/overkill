@@ -137,7 +137,7 @@ void resyncByStatic(int current_frame, IplImage* target) {
   /* Bounding boxes for features */
   static double bounding[] = {
     820, 790, 420, 300, /* x,x,y,y for FEATURE_ZERO */
-    800, 500, 590, 485, /* FEATURE_90 */
+    800, 500, 540, 485, /* FEATURE_90 */
   };
 
   for(int i=STATIC_FEATURE_COUNT;i<FEATURE_COUNT;i++) {
