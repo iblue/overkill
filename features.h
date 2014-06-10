@@ -7,8 +7,9 @@
 #define STATIC_FEATURE_COUNT 6
 
 #define FEATURE_ZERO 6
+#define FEATURE_90 7
 
-#define FEATURE_COUNT 7
+#define FEATURE_COUNT 8
 
 IplImage* feature_templates[FEATURE_COUNT];
 CvMat* feature_results[FEATURE_COUNT];

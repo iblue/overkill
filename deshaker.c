@@ -29,8 +29,8 @@ void deshake(IplImage *frame, IplImage *target) {
 
   /* Same for the source matrix */
   coordinate_count=0;
-  CvPoint2D32f from_pts[6];
-  for(int i=0;i<6;i++) {
+  CvPoint2D32f from_pts[STATIC_FEATURE_COUNT];
+  for(int i=0;i<STATIC_FEATURE_COUNT;i++) {
     if(stable[i]) {
       from_pts[coordinate_count++] = cvPoint2D32f((double) last_location[i].x,
                                                   (double) last_location[i].y);

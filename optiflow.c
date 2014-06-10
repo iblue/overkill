@@ -10,7 +10,7 @@ void findTrackingPoints(IplImage *deshaked_frame, IplImage *mask, int* max_corne
   IplImage* temp_grey = cvCreateImage(cvGetSize(deshaked_frame), IPL_DEPTH_8U, 1);
   cvCvtColor(deshaked_frame, temp_grey, CV_RGB2GRAY);
 
-  cvGoodFeaturesToTrack(temp_grey, NULL, NULL, corners, max_corners, 0.03,
+  cvGoodFeaturesToTrack(temp_grey, NULL, NULL, corners, max_corners, 0.15,
       20, mask, 20, 1, 0.04);
 
   /* Termination criteria for subpixel */
@@ -21,7 +21,7 @@ void findTrackingPoints(IplImage *deshaked_frame, IplImage *mask, int* max_corne
   CvTermCriteria crit = cvTermCriteria(type,iter,eps);
 
   /* Refine by subpixel corner detection */
-  cvFindCornerSubPix(temp_grey, corners, *max_corners, cvSize(5,5), cvSize(-1,-1), crit);
+  cvFindCornerSubPix(temp_grey, corners, *max_corners, cvSize(3,3), cvSize(-1,-1), crit);
   cvReleaseImage(&temp_grey);
 }
 
